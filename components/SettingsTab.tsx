@@ -8,6 +8,8 @@ import {
   Volume2,
   VolumeX,
   Music,
+  Bell,
+  Play,
   Smartphone,
   Download,
   Upload,
@@ -20,9 +22,17 @@ import {
 } from 'lucide-react';
 import { useThemeMusic } from '@/src/audio/useThemeMusic';
 import { themeMusic } from '@/src/audio/themeMusic';
+import { sound } from '@/lib/sound';
 
 export function SettingsTab() {
   const music = useThemeMusic();
+  const [hasCustomSfx, setHasCustomSfx] = useState(() => sound.hasCustomPopup());
+
+  React.useEffect(() => {
+    sound.checkAndInitCustomSfx().then((exists) => {
+      setHasCustomSfx(exists);
+    });
+  }, []);
   const {
     state,
     updateSettings,
@@ -137,22 +147,82 @@ export function SettingsTab() {
           </div>
 
           {/* Sound Effects SFX */}
-          <div className="flex items-center justify-between border-t border-[#2F8CFF]/20 pt-3">
-            <div>
-              <div className="text-[#E8F4FF] font-bold">Acoustic Resonance (System SFX)</div>
-              <div className="text-[10px] text-[#7FA6C9]">Synthesized UI dings & level-up fanfares</div>
+          <div className="border-t border-[#2F8CFF]/20 pt-3 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-[#E8F4FF] font-bold">Acoustic Resonance (System SFX)</div>
+                <div className="text-[10px] text-[#7FA6C9]">UI popups, alerts & level-up fanfares</div>
+              </div>
+              <button
+                onClick={() => updateSettings({ soundEnabled: !state.settings.soundEnabled })}
+                className={`px-3 py-1 text-xs rounded-xs border font-cyber flex items-center gap-1.5 cursor-pointer ${
+                  state.settings.soundEnabled
+                    ? 'bg-[#2F8CFF]/30 border-[#7DF9FF] text-[#7DF9FF]'
+                    : 'bg-[#07101F] border-[#2F8CFF]/30 text-[#7FA6C9]'
+                }`}
+              >
+                {state.settings.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+                {state.settings.soundEnabled ? 'ENABLED' : 'MUTED'}
+              </button>
             </div>
-            <button
-              onClick={() => updateSettings({ soundEnabled: !state.settings.soundEnabled })}
-              className={`px-3 py-1 text-xs rounded-xs border font-cyber flex items-center gap-1.5 cursor-pointer ${
-                state.settings.soundEnabled
-                  ? 'bg-[#2F8CFF]/30 border-[#7DF9FF] text-[#7DF9FF]'
-                  : 'bg-[#07101F] border-[#2F8CFF]/30 text-[#7FA6C9]'
-              }`}
-            >
-              {state.settings.soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
-              {state.settings.soundEnabled ? 'ENABLED' : 'MUTED'}
-            </button>
+
+            {/* Custom Popup Sound Manager */}
+            <div className="p-2.5 rounded-xs bg-[#051021] border border-[#2F8CFF]/30 space-y-2">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-[#7FA6C9] flex items-center gap-1.5">
+                  <Bell className="w-3 h-3 text-[#7DF9FF]" />
+                  Popup & Alert Ding Sound:
+                </span>
+                <span className={hasCustomSfx ? 'text-[#3DFFA2] font-bold' : 'text-[#7DF9FF]'}>
+                  {hasCustomSfx ? 'Custom (src/audio/sfx/popup.mp3)' : 'Default (Synthesizer)'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#2F8CFF]/15">
+                <button
+                  type="button"
+                  onClick={() => sound.playSystemDing()}
+                  className="px-2.5 py-1 text-[10px] rounded-xs bg-[#07101F] hover:bg-[#2F8CFF]/20 border border-[#2F8CFF]/40 text-[#7DF9FF] font-cyber flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <Play className="w-2.5 h-2.5" />
+                  TEST DING
+                </button>
+
+                <label className="px-2.5 py-1 text-[10px] rounded-xs bg-[#2F8CFF]/20 hover:bg-[#2F8CFF]/40 border border-[#2F8CFF]/60 hover:border-[#7DF9FF] text-[#7DF9FF] font-cyber cursor-pointer flex items-center gap-1 transition-all">
+                  <Upload className="w-2.5 h-2.5" />
+                  UPLOAD POPUP SFX (.MP3)
+                  <input
+                    type="file"
+                    accept="audio/*,.mp3,.wav,.ogg,.m4a"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const formData = new FormData();
+                      formData.append('file', file);
+                      try {
+                        const res = await fetch('/api/sfx/upload', {
+                          method: 'POST',
+                          body: formData,
+                        });
+                        if (res.ok) {
+                          await sound.reloadCustomSfx();
+                          setHasCustomSfx(true);
+                          sound.playSystemDing();
+                          showNotification('Custom popup sound saved to src/audio/sfx/popup.mp3!');
+                        } else {
+                          showNotification('Failed to save sound effect file.');
+                        }
+                      } catch {
+                        showNotification('Error uploading sound effect.');
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+              <div className="text-[9px] text-[#7FA6C9]/80">
+                You can also drop files directly into <code className="text-[#7DF9FF]">src/audio/sfx/popup.mp3</code>
+              </div>
+            </div>
           </div>
 
           {/* Theme Background Music */}

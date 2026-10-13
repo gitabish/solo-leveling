@@ -1,12 +1,49 @@
-// Web Audio API synthesized sound effects - zero external file dependencies
+// Web Audio API synthesized sound effects with custom audio file override support
 
 class SoundFX {
   private ctx: AudioContext | null = null;
   private soundEnabled: boolean = true;
   private hapticEnabled: boolean = true;
 
+  // Custom audio file support for popup/ding sound effects
+  private customPopupAudio: HTMLAudioElement | null = null;
+  private customPopupAvailable: boolean = false;
+  private customPopupUrl: string = '/audio/sfx/popup.mp3';
+
   constructor() {
-    // Lazy initialize on first user gesture
+    if (typeof window !== 'undefined') {
+      this.checkAndInitCustomSfx();
+    }
+  }
+
+  public async checkAndInitCustomSfx(): Promise<boolean> {
+    if (typeof window === 'undefined') return false;
+    try {
+      const res = await fetch('/api/sfx/upload', { cache: 'no-store' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.exists && data.url) {
+          this.customPopupUrl = `${data.url}?t=${Date.now()}`;
+          const audio = new Audio(this.customPopupUrl);
+          audio.preload = 'auto';
+          this.customPopupAudio = audio;
+          this.customPopupAvailable = true;
+          return true;
+        }
+      }
+    } catch {
+      // Fallback to synth
+    }
+    this.customPopupAvailable = false;
+    return false;
+  }
+
+  public async reloadCustomSfx(): Promise<boolean> {
+    return this.checkAndInitCustomSfx();
+  }
+
+  public hasCustomPopup(): boolean {
+    return this.customPopupAvailable;
   }
 
   public setSoundEnabled(enabled: boolean) {
@@ -20,7 +57,9 @@ class SoundFX {
   private getContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.ctx) {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioCtx) {
         this.ctx = new AudioCtx();
       }
@@ -42,13 +81,37 @@ class SoundFX {
     }
   }
 
-  // Futuristic System Ding (Window open, quest notification)
+  // Futuristic System Ding (Window open, quest notification, alert popups)
   public playSystemDing() {
     if (!this.soundEnabled) return;
-    const ctx = this.getContext();
-    if (!ctx) return;
 
     this.vibrate(30);
+
+    // If custom popup sound effect file is present, play it
+    if (this.customPopupAvailable && this.customPopupAudio) {
+      try {
+        const audioClone = this.customPopupAudio.cloneNode() as HTMLAudioElement;
+        audioClone.volume = 0.8;
+        const playPromise = audioClone.play();
+        if (playPromise !== undefined) {
+          playPromise.catch(() => {
+            // If browser blocked or file failed, smoothly fallback to synthesizer
+            this.playSynthesizedDing();
+          });
+        }
+        return;
+      } catch {
+        // Fallback to synthesizer
+      }
+    }
+
+    // Default: Synthesized Web Audio chime
+    this.playSynthesizedDing();
+  }
+
+  private playSynthesizedDing() {
+    const ctx = this.getContext();
+    if (!ctx) return;
 
     const now = ctx.currentTime;
     const osc1 = ctx.createOscillator();
@@ -108,17 +171,17 @@ class SoundFX {
     const ctx = this.getContext();
     if (!ctx) return;
 
-    this.vibrate([20, 30, 20]);
+    this.vibrate(20);
 
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
     osc.type = 'sine';
-    osc.frequency.setValueAtTime(587.33, now); // D5
-    osc.frequency.exponentialRampToValueAtTime(1174.66, now + 0.08); // D6
+    osc.frequency.setValueAtTime(523.25, now); // C5
+    osc.frequency.exponentialRampToValueAtTime(1046.5, now + 0.08); // C6
 
-    gain.gain.setValueAtTime(0.2, now);
+    gain.gain.setValueAtTime(0.12, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
 
     osc.connect(gain);
@@ -128,74 +191,84 @@ class SoundFX {
     osc.stop(now + 0.19);
   }
 
-  // Quest Completed Chime
+  // Quest Completed fan-tone
   public playQuestComplete() {
     if (!this.soundEnabled) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
-    this.vibrate([40, 60, 80]);
+    this.vibrate([30, 40, 50]);
 
     const now = ctx.currentTime;
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+    const notes = [587.33, 739.99, 880, 1174.66]; // D5, F#5, A5, D6
     notes.forEach((freq, idx) => {
+      const start = now + idx * 0.07;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
 
-      const startTime = now + idx * 0.08;
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, startTime);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, start);
 
-      gain.gain.setValueAtTime(0.18, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+      gain.gain.setValueAtTime(0.12, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.25);
 
       osc.connect(gain);
       gain.connect(ctx.destination);
 
-      osc.start(startTime);
-      osc.stop(startTime + 0.42);
+      osc.start(start);
+      osc.stop(start + 0.26);
     });
   }
 
-  // Epic Level Up Fanfare
+  // Level Up / Rank Up fanfare
   public playLevelUp() {
     if (!this.soundEnabled) return;
     const ctx = this.getContext();
     if (!ctx) return;
 
-    this.vibrate([80, 50, 100, 50, 150]);
+    this.vibrate([50, 50, 100, 50, 150]);
 
     const now = ctx.currentTime;
-    // Ascending arpeggio with high energy
-    const notes = [392, 523.25, 659.25, 783.99, 1046.5, 1318.5, 1567.98];
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+    const chords = [
+      { t: 0, f: [440, 554.37, 659.25] },
+      { t: 0.15, f: [554.37, 659.25, 880] },
+      { t: 0.3, f: [659.25, 880, 1108.73] },
+      { t: 0.45, f: [880, 1108.73, 1318.51] },
+      { t: 0.65, f: [1108.73, 1318.51, 1760] },
+    ];
 
-      const startTime = now + idx * 0.07;
-      osc.type = idx % 2 === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(freq, startTime);
+    chords.forEach((chord) => {
+      chord.f.forEach((freq) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-      gain.gain.setValueAtTime(0.25, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.5);
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(freq, now + chord.t);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
+        gain.gain.setValueAtTime(0.06, now + chord.t);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + chord.t + 0.4);
 
-      osc.start(startTime);
-      osc.stop(startTime + 0.55);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now + chord.t);
+        osc.stop(now + chord.t + 0.42);
+      });
     });
 
-    // Sub-bass resonance rumble
+    // Deep sub drop on level up
     const subOsc = ctx.createOscillator();
     const subGain = ctx.createGain();
     subOsc.type = 'sine';
-    subOsc.frequency.setValueAtTime(90, now);
-    subOsc.frequency.exponentialRampToValueAtTime(45, now + 0.8);
-    subGain.gain.setValueAtTime(0.3, now);
+    subOsc.frequency.setValueAtTime(150, now);
+    subOsc.frequency.exponentialRampToValueAtTime(40, now + 0.9);
+
+    subGain.gain.setValueAtTime(0.2, now);
     subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+
     subOsc.connect(subGain);
     subGain.connect(ctx.destination);
+
     subOsc.start(now);
     subOsc.stop(now + 0.95);
   }
