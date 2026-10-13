@@ -1,0 +1,6 @@
+{
+  "name": "SYSTEM - Solo Leveling Fitness RPG",
+  "description": "Solo Leveling inspired real-life fitness leveling app with daily quests, hunter ranks, stat points, and penalty survival trials.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
