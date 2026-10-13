@@ -102,15 +102,16 @@ export function SettingsTab() {
         <div className="space-y-4 text-xs">
           {/* Player Name Change */}
           <form onSubmit={handleSaveName} className="space-y-2">
-            <label className="text-[#7FA6C9] uppercase">Designation (Player Name)</label>
-            <div className="flex gap-2">
+            <label className="text-[#7FA6C9] uppercase text-xs tracking-wider">Designation (Player Name)</label>
+            <div className="flex gap-2 items-center">
               <input
                 type="text"
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
-                className="flex-1 bg-[#03060D] border border-[#2F8CFF]/50 px-3 py-1.5 text-sm text-[#E8F4FF] rounded-xs focus:outline-none focus:border-[#7DF9FF]"
+                placeholder="Hunter Designation"
+                className="flex-1 bg-[#03060D] border border-[#2F8CFF]/50 px-3.5 h-10 text-sm leading-normal text-[#E8F4FF] rounded-xs focus:outline-none focus:border-[#7DF9FF] focus:ring-1 focus:ring-[#7DF9FF]/40 font-cyber box-border"
               />
-              <SystemButton type="submit" variant="primary" size="md">
+              <SystemButton type="submit" variant="primary" size="md" className="h-10 shrink-0">
                 UPDATE
               </SystemButton>
             </div>

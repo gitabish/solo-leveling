@@ -47,8 +47,8 @@ function MainApp() {
       {/* Top Header */}
       <Header />
 
-      {/* Main Content Area: Centered Mobile-First Column */}
-      <main className="relative z-20 flex-1 w-full max-w-md mx-auto px-3 sm:px-4 pt-3 pb-8">
+      {/* Main Content Area: Centered Responsive Column */}
+      <main className="relative z-20 flex-1 w-full max-w-xl md:max-w-2xl mx-auto px-3 sm:px-4 pt-3 pb-24">
         {activeTab === 'status' && <StatusTab />}
         {activeTab === 'quests' && <QuestsTab />}
         {activeTab === 'trial' && <TrialTab />}

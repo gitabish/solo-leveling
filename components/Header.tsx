@@ -28,16 +28,16 @@ export function Header() {
 
   return (
     <header className="relative w-full border-b border-[#2F8CFF]/30 bg-[#03060D]/90 backdrop-blur-md px-3 py-2 sm:px-4 sm:py-2.5 z-30">
-      <div className="max-w-md mx-auto flex items-center justify-between">
+      <div className="max-w-xl md:max-w-2xl mx-auto flex items-center justify-between">
         {/* Left: Rank Badge & Player Identification */}
         <div className="flex items-center gap-2.5">
           <RankBadge rank={state.rank} size="sm" />
           <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="font-cyber text-xs font-bold tracking-wider text-[#E8F4FF]">
+            <div className="flex items-center gap-2">
+              <span className="font-cyber text-xs sm:text-sm font-bold tracking-wider text-[#E8F4FF] truncate max-w-[140px] sm:max-w-[220px]">
                 {state.playerName}
               </span>
-              <span className="text-[10px] font-cyber text-[#7DF9FF] px-1 py-0.2 bg-[#2F8CFF]/15 border border-[#2F8CFF]/40 rounded-xs">
+              <span className="text-[10px] sm:text-[11px] font-cyber font-semibold text-[#7DF9FF] px-1.5 py-0.5 bg-[#2F8CFF]/20 border border-[#2F8CFF]/50 rounded-xs shrink-0">
                 LV.{state.level}
               </span>
             </div>

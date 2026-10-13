@@ -5,12 +5,19 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SystemWindow } from './SystemWindow';
 import { SystemButton } from './SystemButton';
 
+import { sound } from '@/lib/sound';
+
 interface NotificationModalProps {
   message: string | null;
   onClose: () => void;
 }
 
 export function NotificationModal({ message, onClose }: NotificationModalProps) {
+  React.useEffect(() => {
+    if (message) {
+      sound.playSystemDing();
+    }
+  }, [message]);
   return (
     <AnimatePresence>
       {message && (

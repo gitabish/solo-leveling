@@ -30,7 +30,7 @@ export function TabBar({ activeTab, onChangeTab, hasQuestClaimable = false }: Ta
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#03060D]/95 backdrop-blur-md border-t border-[#2F8CFF]/30 pb-[env(safe-area-inset-bottom)]">
-      <div className="max-w-md mx-auto grid grid-cols-5 h-14">
+      <div className="max-w-xl md:max-w-2xl mx-auto grid grid-cols-5 h-14">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;

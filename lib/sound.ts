@@ -1,18 +1,35 @@
-// Web Audio API synthesized sound effects with custom audio file override support
+// Web Audio API sound engine with instant preloaded audio pool for custom popup.mp3 SFX
 
 class SoundFX {
   private ctx: AudioContext | null = null;
   private soundEnabled: boolean = true;
   private hapticEnabled: boolean = true;
 
-  // Custom audio file support for popup/ding sound effects
-  private customPopupAudio: HTMLAudioElement | null = null;
-  private customPopupAvailable: boolean = false;
+  // Custom audio pool for popup.mp3 (supports rapid concurrent alerts with zero latency)
+  private popupPool: HTMLAudioElement[] = [];
+  private poolIndex: number = 0;
+  private customPopupAvailable: boolean = true;
   private customPopupUrl: string = '/audio/sfx/popup.mp3';
 
   constructor() {
     if (typeof window !== 'undefined') {
+      this.initPopupPool();
       this.checkAndInitCustomSfx();
+    }
+  }
+
+  private initPopupPool() {
+    if (typeof window === 'undefined') return;
+    try {
+      this.popupPool = [];
+      for (let i = 0; i < 4; i++) {
+        const audio = new Audio(this.customPopupUrl);
+        audio.preload = 'auto';
+        this.popupPool.push(audio);
+      }
+      this.customPopupAvailable = true;
+    } catch (e) {
+      console.warn('Failed to initialize popup audio pool:', e);
     }
   }
 
@@ -24,18 +41,15 @@ class SoundFX {
         const data = await res.json();
         if (data.exists && data.url) {
           this.customPopupUrl = `${data.url}?t=${Date.now()}`;
-          const audio = new Audio(this.customPopupUrl);
-          audio.preload = 'auto';
-          this.customPopupAudio = audio;
+          this.initPopupPool();
           this.customPopupAvailable = true;
           return true;
         }
       }
     } catch {
-      // Fallback to synth
+      // Ignored
     }
-    this.customPopupAvailable = false;
-    return false;
+    return this.customPopupAvailable;
   }
 
   public async reloadCustomSfx(): Promise<boolean> {
@@ -81,32 +95,41 @@ class SoundFX {
     }
   }
 
-  // Futuristic System Ding (Window open, quest notification, alert popups)
+  // Futuristic System Ding & Alert sound (Uses src/audio/sfx/popup.mp3)
   public playSystemDing() {
     if (!this.soundEnabled) return;
 
     this.vibrate(30);
 
-    // If custom popup sound effect file is present, play it
-    if (this.customPopupAvailable && this.customPopupAudio) {
-      try {
-        const audioClone = this.customPopupAudio.cloneNode() as HTMLAudioElement;
-        audioClone.volume = 0.8;
-        const playPromise = audioClone.play();
-        if (playPromise !== undefined) {
-          playPromise.catch(() => {
-            // If browser blocked or file failed, smoothly fallback to synthesizer
-            this.playSynthesizedDing();
-          });
+    // Play from preloaded popup audio pool if available
+    if (this.customPopupAvailable && this.popupPool.length > 0) {
+      const audio = this.popupPool[this.poolIndex];
+      this.poolIndex = (this.poolIndex + 1) % this.popupPool.length;
+
+      if (audio) {
+        try {
+          audio.currentTime = 0;
+          audio.volume = 0.85;
+          const promise = audio.play();
+          if (promise !== undefined) {
+            promise.catch(() => {
+              // Browser blocked or file issue -> fall back to synthesizer
+              this.playSynthesizedDing();
+            });
+          }
+          return;
+        } catch {
+          // Fall back to synthesizer
         }
-        return;
-      } catch {
-        // Fallback to synthesizer
       }
     }
 
-    // Default: Synthesized Web Audio chime
+    // Fallback: Synthesized Web Audio chime
     this.playSynthesizedDing();
+  }
+
+  public playPopupAlert() {
+    this.playSystemDing();
   }
 
   private playSynthesizedDing() {
