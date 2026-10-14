@@ -3,8 +3,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { SystemWindow } from './SystemWindow';
-import { SystemButton } from './SystemButton';
-
 import { sound } from '@/lib/sound';
 
 interface NotificationModalProps {
@@ -18,26 +16,39 @@ export function NotificationModal({ message, onClose }: NotificationModalProps) 
       sound.playSystemDing();
     }
   }, [message]);
+
   return (
     <AnimatePresence>
       {message && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+        <div className="sys-overlay">
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
-            transition={{ duration: 0.15 }}
-            className="w-full max-w-sm"
+            transition={{ duration: 0.2 }}
+            className="w-full flex justify-center"
           >
-            <SystemWindow title="NOTIFICATION" variant="blue">
-              <div className="my-4 text-center font-cyber text-sm text-[#E8F4FF] leading-relaxed">
-                {message}
-              </div>
+            <SystemWindow
+              title="NOTIFICATION"
+              withBars={true}
+              className="max-w-[440px] w-full"
+            >
+              <div className="py-4 px-2 text-center space-y-6">
+                <div
+                  className="font-body text-[15px] text-[#f4faff] tracking-wider leading-[2.2]"
+                >
+                  {message}
+                </div>
 
-              <div className="mt-5 flex justify-center">
-                <SystemButton size="md" variant="primary" onClick={onClose} className="w-32">
-                  CONFIRM
-                </SystemButton>
+                <div className="flex justify-center pt-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="sys-btn px-10 py-2.5 text-sm"
+                  >
+                    CONFIRM
+                  </button>
+                </div>
               </div>
             </SystemWindow>
           </motion.div>

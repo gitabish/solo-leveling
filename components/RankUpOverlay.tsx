@@ -4,9 +4,8 @@ import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { HunterRank } from '@/lib/types';
 import { RANK_CONFIG } from '@/lib/config';
+import { SystemWindow } from './SystemWindow';
 import { RankBadge } from './RankBadge';
-import { SystemButton } from './SystemButton';
-import { Sparkles } from 'lucide-react';
 
 interface RankUpOverlayProps {
   info: {
@@ -21,71 +20,85 @@ export function RankUpOverlay({ info, onClose }: RankUpOverlayProps) {
   if (!info) return null;
 
   const targetConfig = RANK_CONFIG[info.newRank] || RANK_CONFIG.E;
+  const variant = info.newRank === 'S' ? 'gold' : info.newRank === 'A' ? 'violet' : 'blue';
+
+  const stackedLines = [
+    'Rank up!',
+    'Rank up!',
+    'Rank up!',
+    'Rank up!',
+  ];
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/92 backdrop-blur-md overflow-hidden select-none">
-        {/* Glow behind badge */}
-        <div
-          className="absolute w-72 h-72 rounded-full blur-3xl pointer-events-none opacity-40"
-          style={{ backgroundColor: targetConfig.color }}
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          transition={{ duration: 0.4 }}
-          className="relative w-full max-w-sm rounded-sm bg-[#081630]/95 border p-6 text-center"
-          style={{ borderColor: targetConfig.color, boxShadow: `0 0 35px ${targetConfig.bgGlow}` }}
+      <div className="sys-overlay">
+        <SystemWindow
+          title="NOTIFICATION"
+          variant={variant}
+          withBars={true}
+          className="max-w-[420px] w-full"
         >
-          <div className="corner-bracket-tl" />
-          <div className="corner-bracket-tr" />
-          <div className="corner-bracket-bl" />
-          <div className="corner-bracket-br" />
+          <div className="py-2 text-center space-y-6">
+            {/* Four stacked, staggered bold italic 'Rank up!' lines */}
+            <div className="space-y-1 my-3">
+              {stackedLines.map((line, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: idx * 0.12,
+                    duration: 0.35,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="leveled-line"
+                  style={{
+                    color: '#ffffff',
+                    textShadow: `0 0 6px #fff, 0 0 16px ${targetConfig.color}, 0 0 34px ${targetConfig.bgGlow}`,
+                  }}
+                >
+                  {line}
+                </motion.div>
+              ))}
+            </div>
 
-          <div className="text-[11px] font-cyber tracking-widest text-[#7DF9FF] uppercase mb-1">
-            [ RANK PROMOTION CONCLUDED ]
+            {/* Badge display */}
+            <div className="flex justify-center my-2">
+              <RankBadge rank={info.newRank} size="lg" showLabel={true} />
+            </div>
+
+            {/* Details */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55, duration: 0.3 }}
+              className="space-y-2 font-body text-sm text-[#9fc4e0] border-t border-[rgba(183,227,255,0.2)] pt-4"
+            >
+              <div className="font-head font-bold text-white text-base tracking-wider">
+                Rank {info.prevRank} &gt; Rank {info.newRank}
+              </div>
+              <div className="text-xs text-[#b7e3ff]">
+                Cleared [ {info.title} ] • +10 Ability Points Awarded
+              </div>
+            </motion.div>
+
+            {/* Confirm button */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65, duration: 0.25 }}
+              className="pt-2 flex justify-center"
+            >
+              <button
+                type="button"
+                onClick={onClose}
+                className="sys-btn px-10 py-2.5 text-sm"
+              >
+                ACCEPT PROMOTION
+              </button>
+            </motion.div>
           </div>
-
-          <h1
-            className="text-2xl sm:text-3xl font-black font-cyber tracking-wider uppercase my-3"
-            style={{ color: targetConfig.color, textShadow: `0 0 12px ${targetConfig.color}` }}
-          >
-            HUNTER RE-EVALUATION
-          </h1>
-
-          {/* Animating Rank Badge */}
-          <motion.div
-            initial={{ rotateY: 180, scale: 0.5 }}
-            animate={{ rotateY: 360, scale: 1 }}
-            transition={{ duration: 0.8, ease: 'easeOut' }}
-            className="my-6 flex justify-center"
-          >
-            <RankBadge rank={info.newRank} size="xl" showLabel={true} />
-          </motion.div>
-
-          <div className="p-3 bg-[#03060D]/80 border border-[#2F8CFF]/30 rounded-xs mb-4">
-            <p className="font-cyber text-sm text-[#E8F4FF] leading-relaxed">
-              You have passed the [ {info.title} ].
-            </p>
-            <p className="font-cyber text-sm font-bold mt-1" style={{ color: targetConfig.color }}>
-              Promoted from Rank {info.prevRank} → Rank {info.newRank}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between p-2 rounded-xs bg-[#07101F]/80 border border-[#2F8CFF]/20 text-xs font-cyber mb-5">
-            <span className="flex items-center gap-1.5 text-[#7FA6C9]">
-              <Sparkles className="w-3.5 h-3.5 text-[#FFC857]" />
-              Promotion Reward
-            </span>
-            <span className="text-[#FFC857] font-bold">+10 Ability Points</span>
-          </div>
-
-          <SystemButton variant="primary" size="lg" onClick={onClose} className="w-full">
-            ACCEPT PROMOTION
-          </SystemButton>
-        </motion.div>
+        </SystemWindow>
       </div>
     </AnimatePresence>
   );

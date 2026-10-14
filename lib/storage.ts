@@ -1,5 +1,6 @@
-import { SystemState, ExerciseProgress, HunterRank, DailyQuest, PenaltyState, BonusQuest, EmergencyQuest } from './types';
-import { RANK_CONFIG, INITIAL_ITEMS, ALL_TITLES, getExpNeeded } from './config';
+import { SystemState, DailyQuest, PenaltyState, BonusQuest, HunterRank } from './types';
+import { INITIAL_ITEMS, ALL_TITLES } from './config';
+import { dailyQuestFor, penaltyQuestFor, TITLES_LIST, RANK_BANDS } from '@/src/config/progression';
 
 const STORAGE_KEY = 'SOLO_LEVELING_SYSTEM_STATE_V1';
 
@@ -14,11 +15,20 @@ export function getTomorrowMidnightTimestamp(): number {
   return d.getTime();
 }
 
-export function createDailyQuest(rank: HunterRank, dateStr: string = getTodayDateString()): DailyQuest {
-  const rankInfo = RANK_CONFIG[rank] || RANK_CONFIG.E;
+export function createDailyQuest(
+  levelOrRank: number | HunterRank = 1,
+  dateStr: string = getTodayDateString()
+): DailyQuest {
+  const level =
+    typeof levelOrRank === 'number'
+      ? Number.isFinite(levelOrRank) && levelOrRank > 0
+        ? levelOrRank
+        : 1
+      : RANK_BANDS[levelOrRank]?.minLevel || 1;
+  const targets = dailyQuestFor(level);
   return {
     date: dateStr,
-    targets: { ...rankInfo.dailyQuest },
+    targets,
     progress: {
       pushups: 0,
       situps: 0,
@@ -39,7 +49,7 @@ export function createInitialBonusQuests(): BonusQuest[] {
       title: 'Optimal Hydration',
       description: 'Drink 2.5 Liters of water to maintain cellular performance.',
       statReward: 'vitality',
-      expReward: 25,
+      expReward: 20, // Section 3: Bonus quests give +20 EXP each
       completed: false,
       type: 'water',
       targetValue: 2500,
@@ -51,7 +61,7 @@ export function createInitialBonusQuests(): BonusQuest[] {
       title: 'Mental Acuity & Sensory Calibration',
       description: 'Meditate or practice sensory breathing for 10 minutes.',
       statReward: 'sense',
-      expReward: 30,
+      expReward: 20,
       completed: false,
       type: 'meditation',
       targetValue: 10,
@@ -63,7 +73,7 @@ export function createInitialBonusQuests(): BonusQuest[] {
       title: 'Tactical Study & Skill Acquisition',
       description: 'Read or dedicate 30 minutes to focused intellectual growth.',
       statReward: 'intelligence',
-      expReward: 35,
+      expReward: 20,
       completed: false,
       type: 'study',
       targetValue: 30,
@@ -79,7 +89,7 @@ export function createDefaultState(): SystemState {
     onboarded: false,
     playerName: 'Sung',
     job: 'None',
-    activeTitle: 'None',
+    activeTitle: 'Player',
     rank: 'E',
     level: 1,
     exp: 0,
@@ -99,19 +109,21 @@ export function createDefaultState(): SystemState {
     },
     streak: 0,
     bestStreak: 0,
+    totalQuestsCompleted: 0,
+    penaltyQuestsCleared: 0,
     lastActiveDate: today,
-    dailyQuest: createDailyQuest('E', today),
+    dailyQuest: createDailyQuest(1, today),
     penaltyState: {
       isActive: false,
       reason: '',
       startedAt: 0,
       expiresAt: 0,
-      targetReps: { pushups: 15, situps: 15, squats: 15, runKm: 1 },
+      targetReps: penaltyQuestFor(1),
       progressReps: { pushups: 0, situps: 0, squats: 0, runKm: 0 },
     },
     bonusQuests: createInitialBonusQuests(),
     inventory: [...INITIAL_ITEMS],
-    titles: [...ALL_TITLES],
+    titles: ALL_TITLES.map((t) => ({ ...t })),
     settings: {
       soundEnabled: true,
       hapticEnabled: true,
@@ -132,8 +144,54 @@ export function loadSystemState(): SystemState {
 
     const parsed: SystemState = JSON.parse(raw);
 
+    // Merge titles and ensure all 16 titles exist
+    const existingTitleMap = new Map((parsed.titles || []).map((t) => [t.id, t]));
+    const mergedTitles = ALL_TITLES.map((baseTitle) => {
+      const existing = existingTitleMap.get(baseTitle.id);
+      return {
+        ...baseTitle,
+        unlocked: existing?.unlocked ?? baseTitle.unlocked,
+        unlockedAt: existing?.unlockedAt,
+      };
+    });
+
+    const totalQuests = parsed.totalQuestsCompleted ?? 0;
+    const penaltyCleared = parsed.penaltyQuestsCleared ?? 0;
+
+    // Retroactively unlock any titles earned by existing stats
+    mergedTitles.forEach((t) => {
+      const def = TITLES_LIST.find((d) => d.id === t.id);
+      if (!def) return;
+      if (t.unlocked) return;
+
+      if (def.unlock.type === 'onboarding' && parsed.onboarded) {
+        t.unlocked = true;
+      } else if (def.unlock.type === 'quests' && totalQuests >= (def.unlock.value as number)) {
+        t.unlocked = true;
+      } else if (def.unlock.type === 'streak' && parsed.streak >= (def.unlock.value as number)) {
+        t.unlocked = true;
+      } else if (def.unlock.type === 'penalty' && penaltyCleared >= (def.unlock.value as number)) {
+        t.unlocked = true;
+      } else if (def.unlock.type === 'job' && (parsed.job === def.unlock.value || (def.unlock.value === 'Necromancer' && (parsed.job === 'Necromancer' || parsed.job === 'Shadow Monarch')))) {
+        t.unlocked = true;
+      } else if (def.unlock.type === 'rank') {
+        const ranks = ['E', 'D', 'C', 'B', 'A', 'S'];
+        if (ranks.indexOf(parsed.rank) >= ranks.indexOf(def.unlock.value as string)) {
+          t.unlocked = true;
+        }
+      }
+    });
+
+    const hydrated: SystemState = {
+      ...parsed,
+      totalQuestsCompleted: totalQuests,
+      penaltyQuestsCleared: penaltyCleared,
+      titles: mergedTitles,
+      activeTitle: parsed.activeTitle && parsed.activeTitle !== 'None' ? parsed.activeTitle : 'Player',
+    };
+
     // Validate and check daily reset
-    return processDailyTransition(parsed);
+    return processDailyTransition(hydrated);
   } catch (err) {
     console.error('Failed to load system state', err);
     return createDefaultState();
@@ -162,6 +220,7 @@ export function processDailyTransition(state: SystemState): SystemState {
   let newStreak = state.streak;
   let newPenaltyState = { ...state.penaltyState };
   let newShieldCount = state.streakShieldCount;
+  let newExp = state.exp;
 
   if (missedQuest && state.onboarded) {
     // If player has a streak shield, consume it to negate penalty
@@ -171,18 +230,15 @@ export function processDailyTransition(state: SystemState): SystemState {
     } else {
       // Trigger penalty zone!
       newStreak = 0;
-      const rankInfo = RANK_CONFIG[state.rank] || RANK_CONFIG.E;
+      // Missing a day costs 100 EXP; never drops below start of current level (exp = 0)
+      newExp = Math.max(0, state.exp - 100);
+      const penaltyTargets = penaltyQuestFor(state.level);
       newPenaltyState = {
         isActive: true,
         reason: 'Daily Quest incomplete within designated 24-hour cycle.',
         startedAt: Date.now(),
         expiresAt: Date.now() + 4 * 60 * 60 * 1000, // 4 hours
-        targetReps: {
-          pushups: Math.max(15, Math.round(rankInfo.dailyQuest.pushups * 0.5)),
-          situps: Math.max(15, Math.round(rankInfo.dailyQuest.situps * 0.5)),
-          squats: Math.max(15, Math.round(rankInfo.dailyQuest.squats * 0.5)),
-          runKm: Math.max(1, Math.round(rankInfo.dailyQuest.runKm * 0.5)),
-        },
+        targetReps: penaltyTargets,
         progressReps: { pushups: 0, situps: 0, squats: 0, runKm: 0 },
       };
     }
@@ -191,8 +247,10 @@ export function processDailyTransition(state: SystemState): SystemState {
   const newState: SystemState = {
     ...state,
     streak: newStreak,
+    exp: newExp,
     streakShieldCount: newShieldCount,
-    dailyQuest: createDailyQuest(state.rank, today),
+    // Recalculate daily quest numbers from the new formulas starting the next day
+    dailyQuest: createDailyQuest(state.level, today),
     penaltyState: newPenaltyState,
     bonusQuests: createInitialBonusQuests(),
     lastActiveDate: today,

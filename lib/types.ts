@@ -24,6 +24,10 @@ export interface Title {
   description: string;
   unlocked: boolean;
   effect: string;
+  rarity?: 'Common' | 'Rare' | 'Epic' | 'Legendary';
+  canonNote?: string;
+  bonusPct?: number;
+  unlockedAt?: string;
 }
 
 export interface ExerciseProgress {
@@ -94,6 +98,18 @@ export interface EmergencyQuest {
   rewardExp: number;
 }
 
+export interface JobChangeState {
+  inProgress: boolean;
+  advancementPoints: number; // target 15
+  roundStartedAt?: number;
+  roundProgress: {
+    pushups: number;
+    squats: number;
+    situps: number;
+  };
+  cooldownUntil?: number;
+}
+
 export interface SystemState {
   onboarded: boolean;
   playerName: string;
@@ -112,10 +128,13 @@ export interface SystemState {
   stats: PlayerStats;
   streak: number;
   bestStreak: number;
+  totalQuestsCompleted: number;
+  penaltyQuestsCleared: number;
   lastActiveDate: string;
   dailyQuest: DailyQuest;
   penaltyState: PenaltyState;
   activeTrial?: TrialState;
+  jobChangeState?: JobChangeState;
   bonusQuests: BonusQuest[];
   emergencyQuest?: EmergencyQuest;
   inventory: InventoryItem[];

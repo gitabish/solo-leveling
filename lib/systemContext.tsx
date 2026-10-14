@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import {
   SystemState,
   HunterRank,
@@ -20,6 +20,13 @@ import {
   getTodayDateString,
 } from './storage';
 import { RANK_CONFIG, TRIALS_CONFIG, getExpNeeded } from './config';
+import {
+  dailyQuestFor,
+  penaltyQuestFor,
+  calculateQuestExpWithBonus,
+  checkTitleUnlocks,
+  RANK_BANDS,
+} from '@/src/config/progression';
 import { sound } from './sound';
 import confetti from 'canvas-confetti';
 
@@ -37,6 +44,7 @@ interface RankUpInfo {
 
 interface SystemContextType {
   state: SystemState;
+  isHydrated: boolean;
   levelUpModal: LevelUpInfo | null;
   rankUpModal: RankUpInfo | null;
   closeLevelUpModal: () => void;
@@ -73,8 +81,24 @@ interface SystemContextType {
 
 const SystemContext = createContext<SystemContextType | null>(null);
 
+const emptySubscribe = () => () => {};
+const getClientHydrated = () => true;
+const getServerHydrated = () => false;
+
+function useIsHydrated() {
+  return useSyncExternalStore(
+    emptySubscribe,
+    getClientHydrated,
+    getServerHydrated
+  );
+}
+
 export function SystemProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<SystemState>(() => loadSystemState());
+  const isHydrated = useIsHydrated();
+  const [state, setState] = useState<SystemState>(() => {
+    if (typeof window === 'undefined') return createDefaultState();
+    return loadSystemState();
+  });
   const [levelUpModal, setLevelUpModal] = useState<LevelUpInfo | null>(null);
   const [rankUpModal, setRankUpModal] = useState<RankUpInfo | null>(null);
   const [notificationMessage, setNotificationMessage] = useState<string | null>(null);
@@ -105,6 +129,9 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
 
   const onboardPlayer = useCallback((name: string) => {
     setState((prev) => {
+      const updatedTitles = prev.titles.map((t) =>
+        t.id === 'player' ? { ...t, unlocked: true } : t
+      );
       const next: SystemState = {
         ...prev,
         onboarded: true,
@@ -112,8 +139,10 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         level: 1,
         exp: 0,
         rank: 'E',
+        activeTitle: 'Player',
+        titles: updatedTitles,
         abilityPoints: 5,
-        dailyQuest: createDailyQuest('E'),
+        dailyQuest: createDailyQuest(1),
       };
       return next;
     });
@@ -148,7 +177,15 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
     let pointsGained = 0;
     let didLevelUp = false;
 
+    const rankBand = RANK_BANDS[currentState.rank];
+    const capLevel = rankBand?.capLevel;
+
     while (currentExp >= getExpNeeded(currentLvl)) {
+      if (capLevel && currentLvl >= capLevel) {
+        // Enforce rank promotion level cap
+        currentExp = Math.min(currentExp, getExpNeeded(currentLvl));
+        break;
+      }
       currentExp -= getExpNeeded(currentLvl);
       currentLvl += 1;
       pointsGained += 5;
@@ -172,10 +209,17 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         pointsAdded: pointsGained,
       });
 
+      // Dynamically recalculate daily quest targets for the new level
+      const updatedDailyQuest = {
+        ...currentState.dailyQuest,
+        targets: dailyQuestFor(currentLvl),
+      };
+
       return {
         ...currentState,
         level: currentLvl,
         exp: currentExp,
+        dailyQuest: updatedDailyQuest,
         abilityPoints: currentState.abilityPoints + pointsGained,
         hp: currentState.maxHp, // Full HP refill on level up
         mp: currentState.maxMp,
@@ -270,21 +314,19 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
 
       sound.playQuestComplete();
 
-      const rankInfo = RANK_CONFIG[prev.rank] || RANK_CONFIG.E;
-      let expGained = 100 + rankInfo.expBonus;
+      // Pacing & Title EXP bonus from progression rules:
+      const { baseExp, bonusExp, totalExp } = calculateQuestExpWithBonus(
+        prev.streak,
+        prev.activeTitle
+      );
+      let expGained = totalExp;
       if (prev.expBoostActive) {
         expGained = Math.round(expGained * 1.5);
       }
 
       const newStreak = prev.streak + 1;
       const bestStreak = Math.max(prev.bestStreak, newStreak);
-
-      // Check title unlocks
-      const updatedTitles = prev.titles.map((t) => {
-        if (t.id === 'wolf_slayer' && newStreak >= 7) return { ...t, unlocked: true };
-        if (t.id === 'iron_will' && newStreak >= 30) return { ...t, unlocked: true };
-        return t;
-      });
+      const newTotalQuests = (prev.totalQuestsCompleted || 0) + 1;
 
       // Item drop system
       const dropRoll = Math.random();
@@ -320,13 +362,35 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         droppedItemName = 'EXP Boost Token';
       }
 
+      // Check dynamic title unlocks based on new stats
+      const newlyUnlocked = checkTitleUnlocks({
+        totalQuestsCompleted: newTotalQuests,
+        streak: newStreak,
+        penaltyQuestsCleared: prev.penaltyQuestsCleared || 0,
+        rank: prev.rank,
+        job: prev.job,
+        onboarded: prev.onboarded,
+        unlockedTitleIds: new Set(prev.titles.filter((t) => t.unlocked).map((t) => t.id)),
+      });
+      const newlyUnlockedIds = new Set(newlyUnlocked.map((d) => d.id));
+      const updatedTitles = prev.titles.map((t) => {
+        if (newlyUnlockedIds.has(t.id)) return { ...t, unlocked: true };
+        return t;
+      });
+
+      // Daily Quest gives Status Recovery (Full HP/MP restore, fatigue reset) + 3 Ability Points
       const baseUpdated: SystemState = {
         ...prev,
         streak: newStreak,
         bestStreak,
+        totalQuestsCompleted: newTotalQuests,
         titles: updatedTitles,
         inventory: updatedInventory,
         expBoostActive: false,
+        hp: prev.maxHp,
+        mp: prev.maxMp,
+        fatigue: 0,
+        abilityPoints: prev.abilityPoints + 3,
         dailyQuest: {
           ...prev.dailyQuest,
           isClaimed: true,
@@ -335,9 +399,13 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
 
       const finalState = applyExpAndCheckLevel(expGained, baseUpdated);
 
-      const msg = droppedItemName
-        ? `Daily Quest rewards claimed! Earned ${expGained} EXP. Item acquired: [ ${droppedItemName} ]`
-        : `Daily Quest rewards claimed! Earned ${expGained} EXP. Current streak: ${newStreak} days.`;
+      let msg = `Daily Quest rewards claimed! +${expGained} EXP (Base: ${baseExp}${bonusExp > 0 ? `, Title Bonus: +${bonusExp}` : ''}), +3 Ability Points, Full Status Recovery.`;
+      if (droppedItemName) {
+        msg += ` Item acquired: [ ${droppedItemName} ].`;
+      }
+      if (newlyUnlocked.length > 0) {
+        msg += ` New Title Unlocked: [ ${newlyUnlocked.map((u) => u.name).join(', ')} ]!`;
+      }
       showNotification(msg);
 
       return finalState;
@@ -371,13 +439,29 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
 
       sound.playQuestComplete();
 
-      // Unlock "The One Who Overcame Adversity" title
-      const updatedTitles = prev.titles.map((t) =>
-        t.id === 'overcame_adversity' ? { ...t, unlocked: true } : t
-      );
+      const newPenaltyCleared = (prev.penaltyQuestsCleared || 0) + 1;
+
+      // Unlock titles: "The One Who Overcame Adversity"
+      const newlyUnlocked = checkTitleUnlocks({
+        totalQuestsCompleted: prev.totalQuestsCompleted || 0,
+        streak: prev.streak,
+        penaltyQuestsCleared: newPenaltyCleared,
+        rank: prev.rank,
+        job: prev.job,
+        onboarded: prev.onboarded,
+        unlockedTitleIds: new Set(prev.titles.filter((t) => t.unlocked).map((t) => t.id)),
+      });
+      const newlyUnlockedIds = new Set(newlyUnlocked.map((d) => d.id));
+      const updatedTitles = prev.titles.map((t) => {
+        if (t.id === 'overcame_adversity' || newlyUnlockedIds.has(t.id)) {
+          return { ...t, unlocked: true };
+        }
+        return t;
+      });
 
       return {
         ...prev,
+        penaltyQuestsCleared: newPenaltyCleared,
         titles: updatedTitles,
         hp: Math.max(50, prev.hp),
         fatigue: 20,
@@ -391,7 +475,7 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         },
       };
     });
-    showNotification('Penalty Zone survived and cleared. Title acquired: [ The One Who Overcame Adversity ].');
+    showNotification('Penalty Zone survived and cleared! Title acquired: [ The One Who Overcame Adversity ] (+2% EXP boost).');
   }, [showNotification]);
 
   // Start Rank Promotion Trial
@@ -464,19 +548,31 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
         title: trialCfg.title,
       });
 
-      // Unlock monarch titles if high rank
+      const targetMinLevel = RANK_BANDS[newRank]?.minLevel || (prev.level + 1);
+      const nextLevel = Math.max(prev.level, targetMinLevel);
+
+      const newlyUnlocked = checkTitleUnlocks({
+        totalQuestsCompleted: prev.totalQuestsCompleted || 0,
+        streak: prev.streak,
+        penaltyQuestsCleared: prev.penaltyQuestsCleared || 0,
+        rank: newRank,
+        job: prev.job,
+        onboarded: prev.onboarded,
+        unlockedTitleIds: new Set(prev.titles.filter((t) => t.unlocked).map((t) => t.id)),
+      });
+      const newlyUnlockedIds = new Set(newlyUnlocked.map((d) => d.id));
       const updatedTitles = prev.titles.map((t) => {
-        if (newRank === 'A' && t.id === 'monarch_candidate') return { ...t, unlocked: true };
-        if (newRank === 'S' && t.id === 'shadow_sovereign') return { ...t, unlocked: true };
+        if (newlyUnlockedIds.has(t.id)) return { ...t, unlocked: true };
         return t;
       });
 
       return {
         ...prev,
         rank: newRank,
+        level: nextLevel,
         activeTrial: undefined,
         titles: updatedTitles,
-        dailyQuest: createDailyQuest(newRank),
+        dailyQuest: createDailyQuest(nextLevel),
         abilityPoints: prev.abilityPoints + 10, // Generous promotion bonus
         fatigue: 0,
         hp: prev.maxHp,
@@ -697,7 +793,7 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
           reason: 'Daily Quest incomplete within designated 24-hour cycle.',
           startedAt: Date.now(),
           expiresAt: Date.now() + 4 * 60 * 60 * 1000,
-          targetReps: { pushups: 20, situps: 20, squats: 20, runKm: 2 },
+          targetReps: penaltyQuestFor(prev.level),
           progressReps: { pushups: 0, situps: 0, squats: 0, runKm: 0 },
         },
       };
@@ -712,7 +808,7 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
       const tomorrowStr = `${tomorrow.getFullYear()}-${String(tomorrow.getMonth() + 1).padStart(2, '0')}-${String(tomorrow.getDate()).padStart(2, '0')}`;
       return {
         ...prev,
-        dailyQuest: createDailyQuest(prev.rank, tomorrowStr),
+        dailyQuest: createDailyQuest(prev.level, tomorrowStr),
         bonusQuests: createInitialBonusQuests(),
         fatigue: Math.max(0, prev.fatigue - 20),
       };
@@ -723,12 +819,29 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
   const chooseJob = useCallback((jobName: string) => {
     setState((prev) => {
       sound.playLevelUp();
+
+      const newlyUnlocked = checkTitleUnlocks({
+        totalQuestsCompleted: prev.totalQuestsCompleted || 0,
+        streak: prev.streak,
+        penaltyQuestsCleared: prev.penaltyQuestsCleared || 0,
+        rank: prev.rank,
+        job: jobName,
+        onboarded: prev.onboarded,
+        unlockedTitleIds: new Set(prev.titles.filter((t) => t.unlocked).map((t) => t.id)),
+      });
+      const newlyUnlockedIds = new Set(newlyUnlocked.map((d) => d.id));
+      const updatedTitles = prev.titles.map((t) => {
+        if (newlyUnlockedIds.has(t.id)) return { ...t, unlocked: true };
+        return t;
+      });
+
       return {
         ...prev,
         job: jobName,
+        titles: updatedTitles,
         settings: {
           ...prev.settings,
-          themeAura: 'violet',
+          themeAura: jobName !== 'None' ? 'violet' : prev.settings.themeAura,
         },
       };
     });
@@ -739,6 +852,7 @@ export function SystemProvider({ children }: { children: React.ReactNode }) {
     <SystemContext.Provider
       value={{
         state,
+        isHydrated,
         levelUpModal,
         rankUpModal,
         closeLevelUpModal,

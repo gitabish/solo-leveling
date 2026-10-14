@@ -48,9 +48,37 @@ class ThemeMusicManager {
   private crossfadeInterval: NodeJS.Timeout | null = null;
   private duckInterval: NodeJS.Timeout | null = null;
 
+  private cachedState: MusicState = {
+    isPlaying: false,
+    enabled: true,
+    volume: MUSIC_DEFAULT,
+    currentTrack: '01-solo-leveling.mp3',
+    playlist: [
+      {
+        filename: '01-solo-leveling.mp3',
+        url: '/audio/theme/01-solo-leveling.mp3',
+        fallbackUrl: '/api/theme-music/01-solo-leveling.mp3',
+      },
+    ],
+    isDucked: false,
+  };
+
+  private updateCachedState() {
+    this.cachedState = {
+      isPlaying: this.isPlaying,
+      enabled: this.enabled,
+      volume: this.userVolume,
+      currentTrack: this.playlist[this.currentIndex]?.filename || null,
+      playlist: this.playlist,
+      isDucked: this.isDucked,
+    };
+  }
+
   constructor() {
+    this.updateCachedState();
     if (typeof window !== 'undefined') {
       this.loadSettings();
+      this.updateCachedState();
       this.initAudioElements();
       this.fetchPlaylist();
       this.setupGlobalListeners();
@@ -388,24 +416,25 @@ class ThemeMusicManager {
 
   public subscribe(listener: MusicStateListener): () => void {
     this.listeners.add(listener);
-    listener(this.getState());
-    return () => this.listeners.delete(listener);
-  }
-
-  public getState(): MusicState {
-    return {
-      isPlaying: this.isPlaying,
-      enabled: this.enabled,
-      volume: this.userVolume,
-      currentTrack: this.playlist[this.currentIndex]?.filename || null,
-      playlist: [...this.playlist],
-      isDucked: this.isDucked,
+    return () => {
+      this.listeners.delete(listener);
     };
   }
 
+  public getState(): MusicState {
+    return this.cachedState;
+  }
+
   private notify() {
-    const state = this.getState();
-    this.listeners.forEach((listener) => listener(state));
+    this.updateCachedState();
+    const state = this.cachedState;
+    this.listeners.forEach((listener) => {
+      try {
+        listener(state);
+      } catch (err) {
+        console.error('Error in music state listener', err);
+      }
+    });
   }
 }
 

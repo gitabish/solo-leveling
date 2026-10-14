@@ -5,7 +5,11 @@ import { motion } from 'motion/react';
 
 interface SystemWindowProps {
   title?: string;
+  showIcon?: boolean;
+  icon?: React.ReactNode;
   variant?: 'blue' | 'violet' | 'danger' | 'gold';
+  tilt?: boolean;
+  withBars?: boolean;
   children: React.ReactNode;
   className?: string;
   headerRight?: React.ReactNode;
@@ -13,61 +17,77 @@ interface SystemWindowProps {
 
 export function SystemWindow({
   title,
+  showIcon,
+  icon,
   variant = 'blue',
+  tilt = false,
+  withBars = false,
   children,
   className = '',
   headerRight,
 }: SystemWindowProps) {
-  const variantClass = {
-    blue: 'system-window',
-    violet: 'system-window system-window-violet',
-    danger: 'system-window system-window-danger',
-    gold: 'system-window system-window-gold',
-  }[variant];
+  // Determine if title should include the authentic exclamation icon box
+  // By default: STATUS has no icon; QUEST INFO, NOTIFICATION, etc. have icon box
+  const hasIconBox =
+    showIcon !== undefined
+      ? showIcon
+      : title
+      ? title.toUpperCase() !== 'STATUS'
+      : false;
 
-  const titleColor = {
-    blue: 'text-[#7DF9FF] text-glow-cyan',
-    violet: 'text-[#C49BFF] text-glow-violet',
-    danger: 'text-[#FF3B4E] text-glow-danger',
-    gold: 'text-[#FFC857] text-glow-gold',
-  }[variant];
-
-  const lineColor = {
-    blue: 'from-transparent via-[#2F8CFF] to-transparent',
-    violet: 'from-transparent via-[#8B5CFF] to-transparent',
-    danger: 'from-transparent via-[#FF3B4E] to-transparent',
-    gold: 'from-transparent via-[#FFC857] to-transparent',
+  const themeClass = {
+    blue: '',
+    violet: 'theme-violet',
+    danger: 'theme-danger',
+    gold: 'theme-gold',
   }[variant];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ duration: 0.2 }}
-      className={`relative rounded-sm p-4 ${variantClass} ${className}`}
-    >
-      {/* Corner Brackets */}
-      <div className="corner-bracket-tl" />
-      <div className="corner-bracket-tr" />
-      <div className="corner-bracket-bl" />
-      <div className="corner-bracket-br" />
+    <div className={`relative ${themeClass} ${withBars ? 'w-full flex justify-center' : ''}`}>
+      {/* Main Authentic System Window Box with 8px double outer frame & scratches */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.96 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.96 }}
+        transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+        className={`sys-window ${tilt ? 'tilt' : ''} ${className}`}
+      >
+        {/* Glowing Top & Bottom Circuit Bars pushed to the outer perimeter of the box */}
+        {withBars && (
+          <>
+            <div className="sys-bar-wrap top pointer-events-none">
+              <div className="sys-bar" />
+            </div>
+            <div className="sys-bar-wrap bottom pointer-events-none">
+              <div className="sys-bar" />
+            </div>
+          </>
+        )}
 
-      {/* Header if title provided */}
-      {title && (
-        <div className="relative mb-3 flex items-center justify-between pb-2">
-          <div className={`h-[1px] flex-1 bg-gradient-to-r ${lineColor}`} />
-          <div className="mx-3 flex items-center gap-2">
-            <span className={`font-cyber text-xs sm:text-sm font-bold tracking-widest uppercase ${titleColor}`}>
-              [ {title} ]
-            </span>
+        {/* Title Bar (STATUS, QUEST INFO, NOTIFICATION) */}
+        {title && (
+          <div className="sys-title-row">
+            {hasIconBox && (
+              <div className="sys-icon-box">
+                {icon ? (
+                  icon
+                ) : (
+                  <div className="w-5 h-5 rounded-full border-[1.5px] border-[var(--line)] flex items-center justify-center text-[var(--line)] font-head font-bold text-xs shadow-[0_0_8px_var(--glow)]">
+                    !
+                  </div>
+                )}
+              </div>
+            )}
+            <div className="sys-title">
+              {title}
+            </div>
+            {headerRight && <div className="self-center ml-2">{headerRight}</div>}
           </div>
-          <div className={`h-[1px] flex-1 bg-gradient-to-r ${lineColor}`} />
-          {headerRight && <div className="ml-2">{headerRight}</div>}
-        </div>
-      )}
+        )}
 
-      {children}
-    </motion.div>
+        {/* Content */}
+        <div className="relative z-10">{children}</div>
+      </motion.div>
+    </div>
   );
 }

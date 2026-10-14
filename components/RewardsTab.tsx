@@ -44,9 +44,9 @@ export function RewardsTab() {
   ];
 
   return (
-    <div className="space-y-4 pb-20 select-none font-cyber">
+    <div className="space-y-4 pb-20 select-none font-body">
       {/* Inventory Slots Window */}
-      <SystemWindow title="INVENTORY STORAGE" variant="blue">
+      <SystemWindow title="INVENTORY STORAGE">
         <div className="space-y-3">
           <div className="flex justify-between items-center text-xs text-[#7FA6C9]">
             <span>STORED ARTIFACTS & POTIONS</span>

@@ -43,7 +43,7 @@ export function PenaltyScreen() {
   const allCompleted = exercises.every((e) => e.current >= e.target);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[#140205] text-[#FFE8EA] overflow-y-auto p-4 select-none">
+    <div data-theme="danger" className="fixed inset-0 z-50 flex flex-col bg-[#140205] text-[#FFE8EA] overflow-y-auto p-4 select-none">
       {/* Red cracked aura vignette */}
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_transparent_40%,_rgba(255,20,40,0.25)_100%)]" />
       <div className="fixed inset-0 pointer-events-none bg-[radial-gradient(#ff3b4e_1px,transparent_1px)] [background-size:24px_24px] opacity-10" />

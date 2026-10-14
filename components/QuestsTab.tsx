@@ -1,410 +1,173 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useSystem } from '@/lib/systemContext';
 import { SystemWindow } from './SystemWindow';
-import { SystemButton } from './SystemButton';
 import { ExerciseProgress } from '@/lib/types';
-import { RANK_CONFIG } from '@/lib/config';
-import {
-  Clock,
-  CheckCircle2,
-  AlertTriangle,
-  Plus,
-  Gift,
-  Flame,
-  Zap,
-  Droplets,
-  BookOpen,
-  Brain,
-  Timer,
-} from 'lucide-react';
+import { Check, Plus, Minus } from 'lucide-react';
 
 export function QuestsTab() {
   const {
     state,
     updateDailyExercise,
-    setDailyExercise,
     claimDailyQuest,
-    updateBonusQuest,
-    triggerEmergencyQuest,
-    updateEmergencyQuest,
-    completeEmergencyQuest,
   } = useSystem();
 
-  const [timeRemaining, setTimeRemaining] = useState('24:00:00');
-  const [editingKey, setEditingKey] = useState<keyof ExerciseProgress | null>(null);
-  const [manualInputVal, setManualInputVal] = useState('');
-  const [emergencyTimerActive, setEmergencyTimerActive] = useState(false);
+  const [activeExerciseKey, setActiveExerciseKey] = useState<keyof ExerciseProgress | null>(null);
 
   const quest = state.dailyQuest;
-  const rankInfo = RANK_CONFIG[state.rank] || RANK_CONFIG.E;
+  const isCompleted = quest.isCompleted;
+  const isClaimed = quest.isClaimed;
 
-  // 24-hour midnight countdown
-  useEffect(() => {
-    const updateTimer = () => {
-      const now = new Date();
-      const midnight = new Date();
-      midnight.setHours(24, 0, 0, 0);
-      const diff = Math.max(0, midnight.getTime() - now.getTime());
-
-      const hours = Math.floor(diff / (1000 * 60 * 60));
-      const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-      setTimeRemaining(
-        `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-      );
-    };
-
-    updateTimer();
-    const interval = setInterval(updateTimer, 1000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Emergency plank timer tick
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (emergencyTimerActive && state.emergencyQuest && state.emergencyQuest.currentSeconds < state.emergencyQuest.targetSeconds) {
-      interval = setInterval(() => {
-        updateEmergencyQuest(1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [emergencyTimerActive, state.emergencyQuest, updateEmergencyQuest]);
-
-  const exercises = [
-    { key: 'pushups' as const, label: 'Push-ups', target: quest.targets.pushups, current: quest.progress.pushups, unit: 'reps' },
-    { key: 'situps' as const, label: 'Sit-ups', target: quest.targets.situps, current: quest.progress.situps, unit: 'reps' },
-    { key: 'squats' as const, label: 'Squats', target: quest.targets.squats, current: quest.progress.squats, unit: 'reps' },
-    { key: 'pullups' as const, label: 'Pull-ups', target: quest.targets.pullups, current: quest.progress.pullups, unit: 'reps' },
-    { key: 'runKm' as const, label: 'Running', target: quest.targets.runKm, current: quest.progress.runKm, unit: 'km' },
+  const exercises: { key: keyof ExerciseProgress; label: string; unit?: string; step: number }[] = [
+    { key: 'pushups', label: 'Push-ups', step: 10 },
+    { key: 'situps', label: 'Sit-ups', step: 10 },
+    { key: 'squats', label: 'Squats', step: 10 },
+    {
+      key: 'runKm',
+      label: 'Running',
+      unit: state.settings.units === 'imperial' ? 'mi' : 'km',
+      step: 1,
+    },
   ];
 
-  const handleManualSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingKey) return;
-    const parsed = parseFloat(manualInputVal);
-    if (!isNaN(parsed)) {
-      setDailyExercise(editingKey, parsed);
-    }
-    setEditingKey(null);
-    setManualInputVal('');
+  if (quest.targets.pullups && quest.targets.pullups > 0) {
+    exercises.splice(3, 0, { key: 'pullups', label: 'Pull-ups', step: 5 });
+  }
+
+  const handleClaim = () => {
+    if (!isCompleted || isClaimed) return;
+    claimDailyQuest();
   };
 
   return (
-    <div className="space-y-4 pb-20 select-none">
-      {/* Primary Anime Daily Quest Window */}
-      <SystemWindow title="QUEST INFO" variant="blue">
-        <div className="space-y-4 font-cyber">
-          {/* Header info */}
-          <div className="border-b border-[#2F8CFF]/25 pb-2">
-            <div className="text-[10px] text-[#7FA6C9] tracking-widest uppercase">
-              {state.rank}-RANK MANDATORY DIRECTIVE
-            </div>
-            <h3 className="text-base sm:text-lg font-black text-[#E8F4FF] tracking-wider text-glow-cyan">
-              DAILY QUEST: STRENGTH TRAINING
-            </h3>
-
-            <div className="mt-2 flex items-center justify-between text-xs">
-              <span className="text-[#7FA6C9] flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#7DF9FF]" />
-                Time remaining:
-              </span>
-              <span className="font-bold text-[#7DF9FF] tracking-widest text-glow-cyan">
-                {timeRemaining}
-              </span>
-            </div>
+    <div className="space-y-6 pb-20 select-none flex flex-col items-center">
+      <SystemWindow
+        title="QUEST INFO"
+        tilt={true}
+        className="max-w-[460px] w-full"
+      >
+        <div className="space-y-6 pt-1">
+          {/* Subtitle */}
+          <div className="text-center font-head text-[13px] tracking-wide text-[#b7e3ff]">
+            [Daily Quest: Strength Training has arrived.]
           </div>
 
-          {/* Goal objectives list */}
-          <div className="space-y-3">
-            <div className="text-xs text-[#7FA6C9] uppercase tracking-wider flex items-center justify-between">
-              <span>Goal Objectives</span>
-              {state.streak > 0 && (
-                <span className="text-[#FFC857] flex items-center gap-1">
-                  <Flame className="w-3.5 h-3.5 fill-[#FFC857]" />
-                  Streak: {state.streak} Days
-                </span>
-              )}
-            </div>
+          {/* Goal Heading */}
+          <div className="text-center">
+            <h3 className="goal-h">GOAL</h3>
+          </div>
 
+          {/* Exercise Rows */}
+          <div className="space-y-3 px-2 sm:px-4">
             {exercises.map((item) => {
-              const isDone = item.current >= item.target;
-              const percent = Math.min(100, Math.round((item.current / item.target) * 100));
+              const cur = quest.progress[item.key] || 0;
+              const target = quest.targets[item.key] || 0;
+              const isDone = cur >= target;
+              const isSelected = activeExerciseKey === item.key;
 
               return (
-                <div
-                  key={item.key}
-                  className={`p-3 rounded-xs border transition-all ${
-                    isDone
-                      ? 'bg-[#092B28]/60 border-[#3DFFA2]/60'
-                      : 'bg-[#06142E]/80 border-[#2F8CFF]/30'
-                  }`}
-                >
-                  <div className="flex items-center justify-between text-xs mb-1.5">
-                    <span className="font-bold text-[#E8F4FF]">{item.label}</span>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-[#7FA6C9]">
-                        ({item.current}/{item.target} {item.unit})
+                <div key={item.key} className="space-y-1.5">
+                  <div
+                    onClick={() => setActiveExerciseKey(isSelected ? null : item.key)}
+                    className="quest-row cursor-pointer hover:bg-[rgba(207,233,255,0.04)] px-2 rounded-xs transition-colors"
+                  >
+                    <span className="font-body font-medium text-base text-[#f4faff]">
+                      {item.label}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-head font-semibold text-sm tracking-wide text-[#b7e3ff]">
+                        [{cur}/{target}{item.unit ? item.unit : ''}]
                       </span>
-                      <span
-                        className={`text-[11px] font-bold px-1.5 py-0.5 rounded-xs ${
-                          isDone
-                            ? 'bg-[#3DFFA2]/20 text-[#3DFFA2] border border-[#3DFFA2]/50'
-                            : 'bg-[#FF3B4E]/15 text-[#FF9EAA] border border-[#FF3B4E]/30'
-                        }`}
-                      >
-                        [ {isDone ? 'Complete' : 'Incomplete'} ]
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Progress bar */}
-                  <div className="w-full h-1.5 bg-[#03060D] rounded-full overflow-hidden mb-2.5">
-                    <div
-                      className={`h-full transition-all duration-300 ${
-                        isDone ? 'bg-[#3DFFA2] shadow-[0_0_8px_#3DFFA2]' : 'bg-[#2F8CFF]'
-                      }`}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-
-                  {/* Action buttons */}
-                  {!quest.isClaimed && (
-                    <div className="flex items-center justify-between pt-1">
-                      <button
-                        onClick={() => {
-                          setEditingKey(item.key);
-                          setManualInputVal(String(item.current));
-                        }}
-                        className="text-[10px] text-[#7FA6C9] hover:text-[#7DF9FF] underline cursor-pointer"
-                      >
-                        Manual entry
-                      </button>
-
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          onClick={() => updateDailyExercise(item.key, item.key === 'runKm' ? 0.5 : 1)}
-                          className="px-2 py-0.5 rounded-xs bg-[#0F2852] border border-[#2F8CFF]/50 text-[#7DF9FF] text-[10px] hover:bg-[#1E4380] active:scale-95 flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Plus className="w-2.5 h-2.5" />
-                          {item.key === 'runKm' ? '0.5' : '1'}
-                        </button>
-                        <button
-                          onClick={() => updateDailyExercise(item.key, item.key === 'runKm' ? 1 : 5)}
-                          className="px-2 py-0.5 rounded-xs bg-[#0F2852] border border-[#2F8CFF]/50 text-[#7DF9FF] text-[10px] hover:bg-[#1E4380] active:scale-95 flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Plus className="w-2.5 h-2.5" />
-                          {item.key === 'runKm' ? '1' : '5'}
-                        </button>
-                        <button
-                          onClick={() => updateDailyExercise(item.key, item.key === 'runKm' ? 2 : 10)}
-                          className="px-2 py-0.5 rounded-xs bg-[#0F2852] border border-[#2F8CFF]/50 text-[#7DF9FF] text-[10px] hover:bg-[#1E4380] active:scale-95 flex items-center gap-0.5 cursor-pointer"
-                        >
-                          <Plus className="w-2.5 h-2.5" />
-                          {item.key === 'runKm' ? '2' : '10'}
-                        </button>
+                      <div className={`quest-check ${isDone ? 'checked' : ''}`}>
+                        {isDone && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                       </div>
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Caution prompt mirroring anime */}
-          <div className="p-2.5 rounded-xs bg-[#170509]/80 border border-[#FF3B4E]/40 text-[11px] text-[#FFB3BA] leading-relaxed flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 text-[#FF3B4E] shrink-0 mt-0.5" />
-            <span>
-              Caution: Failure to complete the Daily Quest will result in an appropriate penalty.
-            </span>
-          </div>
-
-          {/* Claim Rewards button */}
-          <div className="pt-2">
-            {quest.isClaimed ? (
-              <div className="p-3 text-center rounded-xs bg-[#092B28]/60 border border-[#3DFFA2]/60 text-[#3DFFA2] text-xs font-bold">
-                [ Daily Quest Rewards Claimed For Today ]
-              </div>
-            ) : (
-              <SystemButton
-                variant={quest.isCompleted ? 'gold' : 'subtle'}
-                size="lg"
-                disabled={!quest.isCompleted}
-                onClick={claimDailyQuest}
-                className="w-full flex items-center justify-center gap-2"
-              >
-                <Gift className="w-4 h-4" />
-                {quest.isCompleted ? 'CLAIM REWARDS' : 'COMPLETE ALL OBJECTIVES TO CLAIM'}
-              </SystemButton>
-            )}
-          </div>
-        </div>
-      </SystemWindow>
-
-      {/* Manual Input Dialog if open */}
-      {editingKey && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="w-full max-w-xs">
-            <SystemWindow title="INPUT EXERCISE REPS">
-              <form onSubmit={handleManualSubmit} className="space-y-4 font-cyber">
-                <div className="text-xs text-[#7FA6C9]">
-                  Enter completed total value for {editingKey}:
-                </div>
-                <input
-                  type="number"
-                  step="any"
-                  autoFocus
-                  required
-                  value={manualInputVal}
-                  onChange={(e) => setManualInputVal(e.target.value)}
-                  className="w-full bg-[#03060D] border border-[#2F8CFF] px-3 py-2 text-base text-[#7DF9FF] rounded-xs focus:outline-none"
-                />
-                <div className="flex gap-2">
-                  <SystemButton type="submit" variant="primary" size="md" className="flex-1">
-                    SET
-                  </SystemButton>
-                  <SystemButton
-                    type="button"
-                    variant="subtle"
-                    size="md"
-                    onClick={() => setEditingKey(null)}
-                    className="flex-1"
-                  >
-                    CANCEL
-                  </SystemButton>
-                </div>
-              </form>
-            </SystemWindow>
-          </div>
-        </div>
-      )}
-
-      {/* Emergency Quest Window */}
-      {state.emergencyQuest ? (
-        <SystemWindow title="EMERGENCY QUEST" variant="danger">
-          <div className="space-y-3 font-cyber text-xs">
-            <div className="flex justify-between items-center text-[#FF9EAA]">
-              <span className="font-bold">{state.emergencyQuest.title}</span>
-              <span className="text-[11px] text-[#FF3B4E] animate-pulse">GATE ACTIVE</span>
-            </div>
-            <p className="text-[#FFCCD1]">{state.emergencyQuest.description}</p>
-
-            <div className="p-3 bg-[#22070B] border border-[#FF3B4E]/40 rounded-xs flex items-center justify-between">
-              <span className="text-[#FFE8EA]">Plank Hold Timer:</span>
-              <span className="text-sm font-bold text-[#FF3B4E]">
-                {state.emergencyQuest.currentSeconds} / {state.emergencyQuest.targetSeconds}s
-              </span>
-            </div>
-
-            <div className="flex gap-2">
-              <SystemButton
-                variant={emergencyTimerActive ? 'danger' : 'primary'}
-                size="md"
-                onClick={() => setEmergencyTimerActive(!emergencyTimerActive)}
-                className="flex-1 flex items-center justify-center gap-1.5"
-              >
-                <Timer className="w-3.5 h-3.5" />
-                {emergencyTimerActive ? 'PAUSE TIMER' : 'START TIMER'}
-              </SystemButton>
-
-              <SystemButton
-                variant="gold"
-                size="md"
-                disabled={state.emergencyQuest.currentSeconds < state.emergencyQuest.targetSeconds}
-                onClick={completeEmergencyQuest}
-                className="flex-1"
-              >
-                CLAIM +{state.emergencyQuest.rewardExp} EXP
-              </SystemButton>
-            </div>
-          </div>
-        </SystemWindow>
-      ) : (
-        <div className="flex justify-end">
-          <button
-            onClick={triggerEmergencyQuest}
-            className="text-[11px] font-cyber text-[#7FA6C9] hover:text-[#7DF9FF] underline cursor-pointer"
-          >
-            [ Scan For Surprise Emergency Quest ]
-          </button>
-        </div>
-      )}
-
-      {/* Bonus Quests for INT & SENSE Window */}
-      <SystemWindow title="TACTICAL BONUS QUESTS" variant="blue">
-        <div className="space-y-3 font-cyber text-xs">
-          <p className="text-[11px] text-[#7FA6C9] leading-relaxed">
-            Optional cognitive and sensory directives that permanently develop INTELLIGENCE and SENSE parameters.
-          </p>
-
-          <div className="space-y-2.5">
-            {state.bonusQuests.map((bq) => {
-              const iconMap = {
-                water: Droplets,
-                meditation: Brain,
-                study: BookOpen,
-                sleep: Brain,
-              };
-              const Icon = iconMap[bq.type] || Brain;
-              const percent = Math.min(100, Math.round((bq.currentValue / bq.targetValue) * 100));
-
-              return (
-                <div
-                  key={bq.id}
-                  className={`p-3 rounded-xs border transition-all ${
-                    bq.completed
-                      ? 'bg-[#092B28]/60 border-[#3DFFA2]/60'
-                      : 'bg-[#071329]/70 border-[#2F8CFF]/25'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-[#E8F4FF] flex items-center gap-1.5">
-                      <Icon className="w-3.5 h-3.5 text-[#7DF9FF]" />
-                      {bq.title}
-                    </span>
-                    <span className="text-[10px] text-[#FFC857]">
-                      +{bq.expReward} EXP • +1 {bq.statReward.toUpperCase()}
-                    </span>
                   </div>
 
-                  <p className="text-[10px] text-[#7FA6C9] mb-2">{bq.description}</p>
-
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="text-[#7FA6C9]">Progress:</span>
-                    <span className={bq.completed ? 'text-[#3DFFA2] font-bold' : 'text-[#7DF9FF]'}>
-                      {bq.currentValue} / {bq.targetValue} {bq.unit}
-                    </span>
-                  </div>
-
-                  <div className="w-full h-1.5 bg-[#03060D] rounded-full overflow-hidden mb-2">
-                    <div
-                      className={`h-full ${bq.completed ? 'bg-[#3DFFA2]' : 'bg-[#7DF9FF]'}`}
-                      style={{ width: `${percent}%` }}
-                    />
-                  </div>
-
-                  {!bq.completed && (
-                    <div className="flex justify-end gap-1.5 pt-1">
+                  {/* Inline quick logger controls when expanded */}
+                  {isSelected && (
+                    <div className="flex items-center justify-end gap-1.5 py-1 px-2 border-t border-[rgba(183,227,255,0.2)] bg-[rgba(6,16,31,0.5)] rounded-xs">
+                      <span className="text-[10px] font-head text-[#9fc4e0] mr-auto">
+                        LOG REPS:
+                      </span>
                       <button
-                        onClick={() => updateBonusQuest(bq.id, bq.type === 'water' ? 250 : 5)}
-                        className="px-2 py-0.5 rounded-xs bg-[#0F2852] border border-[#2F8CFF]/50 text-[#7DF9FF] text-[10px] hover:bg-[#1E4380] active:scale-95 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateDailyExercise(item.key, -item.step);
+                        }}
+                        className="px-2 py-0.5 text-xs font-head border border-[rgba(183,227,255,0.3)] bg-[rgba(6,16,31,0.7)] text-[#9fc4e0] hover:text-white rounded-xs flex items-center gap-1 cursor-pointer"
                       >
-                        +{bq.type === 'water' ? '250ml' : '5m'}
+                        <Minus className="w-2.5 h-2.5" /> {item.step}
                       </button>
                       <button
-                        onClick={() => updateBonusQuest(bq.id, bq.type === 'water' ? 500 : 15)}
-                        className="px-2 py-0.5 rounded-xs bg-[#0F2852] border border-[#2F8CFF]/50 text-[#7DF9FF] text-[10px] hover:bg-[#1E4380] active:scale-95 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateDailyExercise(item.key, 1);
+                        }}
+                        className="px-2.5 py-0.5 text-xs font-head border border-[var(--line)] bg-[rgba(47,155,255,0.2)] text-[#f4faff] hover:bg-[rgba(47,155,255,0.35)] rounded-xs flex items-center gap-0.5 cursor-pointer"
                       >
-                        +{bq.type === 'water' ? '500ml' : '15m'}
+                        <Plus className="w-2.5 h-2.5" /> 1
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          updateDailyExercise(item.key, item.step);
+                        }}
+                        className="px-2.5 py-0.5 text-xs font-head border border-[var(--line)] bg-[rgba(47,155,255,0.3)] text-[#7df9ff] hover:bg-[rgba(47,155,255,0.45)] rounded-xs flex items-center gap-0.5 cursor-pointer font-bold shadow-[0_0_8px_var(--glow)]"
+                      >
+                        <Plus className="w-2.5 h-2.5" /> {item.step}
                       </button>
                     </div>
                   )}
                 </div>
               );
             })}
+          </div>
+
+          {/* Warning Box */}
+          <div className="warn-box px-2 sm:px-4 text-center">
+            <span className="font-semibold text-[#f4faff]">WARNING: Failure to complete</span>
+            <br />
+            <span>the daily quest will result in</span>
+            <br />
+            <span>an appropriate </span>
+            <span className="warn-bad">penalty.</span>
+          </div>
+
+          {/* 58px Square Outlined Confirm / Claim Button */}
+          <div className="flex flex-col items-center justify-center pt-2 gap-2">
+            <button
+              onClick={handleClaim}
+              disabled={!isCompleted || isClaimed}
+              title={
+                isClaimed
+                  ? 'Rewards already claimed for today'
+                  : isCompleted
+                  ? 'Claim Daily Quest Rewards'
+                  : 'Complete all goals to claim rewards'
+              }
+              className={`confirm-btn ${isCompleted && !isClaimed ? 'active' : ''} ${
+                !isCompleted ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
+              }`}
+            >
+              <Check
+                className={`w-8 h-8 stroke-[2.5] ${
+                  isCompleted && !isClaimed
+                    ? 'text-[var(--ok)] drop-shadow-[0_0_8px_var(--ok)]'
+                    : isClaimed
+                    ? 'text-[#9fc4e0]'
+                    : 'text-white/40'
+                }`}
+              />
+            </button>
+            <span className="text-[10px] font-head tracking-wider text-[#9fc4e0]">
+              {isClaimed
+                ? 'REWARDS CLAIMED'
+                : isCompleted
+                ? 'CLICK TO CLAIM REWARDS'
+                : 'STATUS: INCOMPLETE'}
+            </span>
           </div>
         </div>
       </SystemWindow>

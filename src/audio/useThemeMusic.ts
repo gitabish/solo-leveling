@@ -1,17 +1,27 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { themeMusic, MusicState } from './themeMusic';
+import { useSyncExternalStore } from 'react';
+import { themeMusic, MusicState, MUSIC_DEFAULT } from './themeMusic';
+
+const SERVER_MUSIC_STATE: MusicState = {
+  isPlaying: false,
+  enabled: true,
+  volume: MUSIC_DEFAULT,
+  currentTrack: null,
+  playlist: [],
+  isDucked: false,
+};
+
+const subscribe = (callback: () => void) => themeMusic.subscribe(callback);
+const getSnapshot = () => themeMusic.getState();
+const getServerSnapshot = () => SERVER_MUSIC_STATE;
 
 export function useThemeMusic() {
-  const [musicState, setMusicState] = useState<MusicState>(() => themeMusic.getState());
-
-  useEffect(() => {
-    const unsubscribe = themeMusic.subscribe((state) => {
-      setMusicState(state);
-    });
-    return unsubscribe;
-  }, []);
+  const musicState = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
 
   const togglePlay = () => {
     themeMusic.togglePlay();

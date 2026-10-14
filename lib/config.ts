@@ -1,4 +1,5 @@
 import { ExerciseProgress, HunterRank, InventoryItem, Title } from './types';
+import { expToNext, TITLES_LIST, dailyQuestFor } from '@/src/config/progression';
 
 export interface RankInfo {
   rank: HunterRank;
@@ -19,6 +20,7 @@ export interface TrialConfig {
   minLevel: number;
   description: string;
   targets: ExerciseProgress;
+  timeLimitMinutes?: number;
 }
 
 export const RANK_CONFIG: Record<HunterRank, RankInfo> = {
@@ -30,13 +32,7 @@ export const RANK_CONFIG: Record<HunterRank, RankInfo> = {
     color: '#6C8CA8',
     badgeBorder: '#84A7C7',
     bgGlow: 'rgba(108, 140, 168, 0.4)',
-    dailyQuest: {
-      pushups: 30,
-      situps: 30,
-      squats: 30,
-      pullups: 10,
-      runKm: 2,
-    },
+    dailyQuest: dailyQuestFor(1),
     expBonus: 0,
   },
   D: {
@@ -47,13 +43,7 @@ export const RANK_CONFIG: Record<HunterRank, RankInfo> = {
     color: '#3DE0C0',
     badgeBorder: '#4DF5D2',
     bgGlow: 'rgba(61, 224, 192, 0.4)',
-    dailyQuest: {
-      pushups: 60,
-      situps: 60,
-      squats: 60,
-      pullups: 20,
-      runKm: 4,
-    },
+    dailyQuest: dailyQuestFor(11),
     expBonus: 25,
   },
   C: {
@@ -64,13 +54,7 @@ export const RANK_CONFIG: Record<HunterRank, RankInfo> = {
     color: '#3FA9FF',
     badgeBorder: '#5EC0FF',
     bgGlow: 'rgba(63, 169, 255, 0.4)',
-    dailyQuest: {
-      pushups: 100,
-      situps: 100,
-      squats: 100,
-      pullups: 30,
-      runKm: 6,
-    },
+    dailyQuest: dailyQuestFor(26),
     expBonus: 60,
   },
   B: {
@@ -81,47 +65,29 @@ export const RANK_CONFIG: Record<HunterRank, RankInfo> = {
     color: '#8B5CFF',
     badgeBorder: '#AA82FF',
     bgGlow: 'rgba(139, 92, 255, 0.45)',
-    dailyQuest: {
-      pushups: 100,
-      situps: 100,
-      squats: 100,
-      pullups: 40,
-      runKm: 10,
-    },
+    dailyQuest: dailyQuestFor(46),
     expBonus: 120,
   },
   A: {
     rank: 'A',
     name: 'A-Rank Hunter',
     minLevel: 71,
-    maxLevel: 99,
+    maxLevel: 98,
     color: '#FF7A3D',
     badgeBorder: '#FF9564',
     bgGlow: 'rgba(255, 122, 61, 0.45)',
-    dailyQuest: {
-      pushups: 150,
-      situps: 150,
-      squats: 150,
-      pullups: 50,
-      runKm: 10,
-    },
+    dailyQuest: dailyQuestFor(71),
     expBonus: 200,
   },
   S: {
     rank: 'S',
     name: 'S-Rank Monarch',
-    minLevel: 100,
+    minLevel: 99,
     maxLevel: 999,
     color: '#FFC857',
     badgeBorder: '#FFE08A',
     bgGlow: 'rgba(255, 200, 87, 0.55)',
-    dailyQuest: {
-      pushups: 200,
-      situps: 200,
-      squats: 200,
-      pullups: 60,
-      runKm: 10,
-    },
+    dailyQuest: dailyQuestFor(99),
     expBonus: 350,
   },
 };
@@ -130,12 +96,12 @@ export const TRIALS_CONFIG: TrialConfig[] = [
   {
     fromRank: 'E',
     toRank: 'D',
-    title: 'Trial of the Awakened',
+    title: 'Trial of the Awakened (E → D)',
     minLevel: 10,
-    description: 'Prove you have surpassed the limits of ordinary mankind. Single day rep requirement.',
+    description: 'Surpass ordinary human limits. Single day total reps requirement.',
     targets: {
       pushups: 60,
-      pullups: 60,
+      pullups: 25,
       squats: 60,
       situps: 60,
       runKm: 0,
@@ -144,12 +110,12 @@ export const TRIALS_CONFIG: TrialConfig[] = [
   {
     fromRank: 'D',
     toRank: 'C',
-    title: 'Trial of Steel Endurance',
+    title: 'Trial of Steel Endurance (D → C)',
     minLevel: 25,
     description: 'Break into the intermediate ranks. Heavy compound volume and cardiovascular stamina.',
     targets: {
       pushups: 100,
-      pullups: 80,
+      pullups: 40,
       squats: 100,
       situps: 100,
       runKm: 3,
@@ -158,12 +124,12 @@ export const TRIALS_CONFIG: TrialConfig[] = [
   {
     fromRank: 'C',
     toRank: 'B',
-    title: 'Trial of High-Tier Assault',
+    title: 'Trial of High-Tier Assault (C → B)',
     minLevel: 45,
     description: 'B-Rank hunters withstand battlefield-grade exertion. Extreme calisthenic test.',
     targets: {
       pushups: 150,
-      pullups: 100,
+      pullups: 55,
       squats: 150,
       situps: 150,
       runKm: 5,
@@ -172,12 +138,12 @@ export const TRIALS_CONFIG: TrialConfig[] = [
   {
     fromRank: 'B',
     toRank: 'A',
-    title: 'Trial of the Monarch Candidate',
+    title: 'Trial of the Monarch Candidate (B → A)',
     minLevel: 70,
     description: 'A-Rank represents the pinnacle of human capacity. Colossal physical output.',
     targets: {
       pushups: 200,
-      pullups: 120,
+      pullups: 70,
       squats: 200,
       situps: 200,
       runKm: 10,
@@ -186,16 +152,17 @@ export const TRIALS_CONFIG: TrialConfig[] = [
   {
     fromRank: 'A',
     toRank: 'S',
-    title: 'Trial of Supreme Re-Awakening',
-    minLevel: 99,
-    description: 'The S-Rank trial is transcending mortal boundaries. The mark of a true Sovereign.',
+    title: 'Trial of Supreme Re-Awakening (A → S)',
+    minLevel: 98,
+    description: 'The S-Rank trial is transcending mortal boundaries. Complete 10km run under 60 minutes.',
     targets: {
       pushups: 300,
-      pullups: 150,
+      pullups: 100,
       squats: 300,
       situps: 300,
       runKm: 10,
     },
+    timeLimitMinutes: 60,
   },
 ];
 
@@ -220,48 +187,34 @@ export const INITIAL_ITEMS: InventoryItem[] = [
   },
 ];
 
-export const ALL_TITLES: Title[] = [
-  {
-    id: 'wolf_slayer',
-    name: 'Wolf Slayer',
-    description: 'Achieve a continuous 7-day Daily Quest streak.',
-    unlocked: false,
-    effect: '+5% Strength performance boost',
-  },
-  {
-    id: 'overcame_adversity',
-    name: 'The One Who Overcame Adversity',
-    description: 'Survive and clear a Penalty Zone quest.',
-    unlocked: false,
-    effect: 'Fatigue accumulation reduced by 10%',
-  },
-  {
-    id: 'iron_will',
-    name: 'Iron Will',
-    description: 'Achieve a formidable 30-day streak.',
-    unlocked: false,
-    effect: '+10% EXP on all completed quests',
-  },
-  {
-    id: 'monarch_candidate',
-    name: 'Monarch Candidate',
-    description: 'Reach Rank A through rigorous trials.',
-    unlocked: false,
-    effect: 'Unlock aura customization & +10 All Stats',
-  },
-  {
-    id: 'shadow_sovereign',
-    name: 'Shadow Sovereign',
-    description: 'Ascend to Rank S and command the shadows.',
-    unlocked: false,
-    effect: 'Supreme monarch status and permanent golden aura',
-  },
-];
+// Convert all titles from progression.ts
+export const ALL_TITLES: Title[] = TITLES_LIST.map((t) => ({
+  id: t.id,
+  name: t.name,
+  rarity: t.rarity,
+  description: t.canonNote,
+  canonNote: t.canonNote,
+  bonusPct: t.bonusPct,
+  effect: `+${t.bonusPct}% Daily Quest EXP`,
+  unlocked: t.id === 'player', // 'Player' is starting title given at onboarding
+}));
 
 export function getExpNeeded(level: number): number {
-  return 100 + (level - 1) * 40;
+  return expToNext(level);
 }
 
-export function calculatePower(stats: { strength: number; agility: number; vitality: number; intelligence: number; sense: number }): number {
-  return stats.strength * 3 + stats.agility * 2.5 + stats.vitality * 2.5 + stats.intelligence * 2 + stats.sense * 2;
+export function calculatePower(stats: {
+  strength: number;
+  agility: number;
+  vitality: number;
+  intelligence: number;
+  sense: number;
+}): number {
+  return (
+    stats.strength * 3 +
+    stats.agility * 2.5 +
+    stats.vitality * 2.5 +
+    stats.intelligence * 2 +
+    stats.sense * 2
+  );
 }

@@ -29,7 +29,7 @@ export function TabBar({ activeTab, onChangeTab, hasQuestClaimable = false }: Ta
   };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#03060D]/95 backdrop-blur-md border-t border-[#2F8CFF]/30 pb-[env(safe-area-inset-bottom)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--bg-1)]/95 backdrop-blur-md border-t border-[var(--line-soft)] pb-[env(safe-area-inset-bottom)]">
       <div className="max-w-xl md:max-w-2xl mx-auto grid grid-cols-5 h-14">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -39,26 +39,32 @@ export function TabBar({ activeTab, onChangeTab, hasQuestClaimable = false }: Ta
             <button
               key={tab.id}
               onClick={() => handleTabClick(tab.id)}
-              className={`relative flex flex-col items-center justify-center gap-1 transition-all select-none ${
+              className={`relative flex flex-col items-center justify-center gap-1 transition-all select-none cursor-pointer ${
                 isActive
-                  ? 'text-[#7DF9FF]'
-                  : 'text-[#7FA6C9] hover:text-[#E8F4FF] opacity-70 hover:opacity-100'
+                  ? 'text-white'
+                  : 'text-[#9fc4e0] hover:text-[#f4faff] opacity-70 hover:opacity-100'
               }`}
             >
-              {/* Active Tab Glowing Top Indicator */}
-              {isActive && (
-                <div className="absolute top-0 left-2 right-2 h-[2px] bg-[#7DF9FF] shadow-[0_0_8px_#7DF9FF]" />
-              )}
-
               {/* Notification badge for claimable quests */}
               {tab.id === 'quests' && hasQuestClaimable && (
-                <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[#3DFFA2] shadow-[0_0_6px_#3DFFA2] animate-ping" />
+                <span className="absolute top-2 right-4 w-2 h-2 rounded-full bg-[var(--ok)] shadow-[0_0_6px_var(--ok)] animate-ping" />
               )}
 
-              <Icon className={`w-4 h-4 sm:w-5 sm:h-5 ${isActive ? 'drop-shadow-[0_0_6px_#7DF9FF]' : ''}`} />
-              <span className="font-cyber text-[9px] tracking-wider font-semibold">
+              <Icon
+                className={`w-4 h-4 sm:w-5 sm:h-5 ${
+                  isActive
+                    ? 'drop-shadow-[0_0_8px_var(--glow-hi)] text-white'
+                    : 'text-[#9fc4e0]'
+                }`}
+              />
+              <span className="font-head text-[9px] tracking-[0.16em] font-bold">
                 {tab.label}
               </span>
+
+              {/* Active Tab Glowing Bottom Underline */}
+              {isActive && (
+                <div className="absolute bottom-0 left-3 right-3 h-[2px] bg-[var(--glow-hi)] shadow-[0_0_10px_var(--glow)]" />
+              )}
             </button>
           );
         })}

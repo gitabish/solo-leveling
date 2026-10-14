@@ -2,8 +2,7 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { SystemButton } from './SystemButton';
-import { Sparkles, Zap, Heart, BatteryCharging } from 'lucide-react';
+import { SystemWindow } from './SystemWindow';
 
 interface LevelUpOverlayProps {
   info: {
@@ -17,88 +16,78 @@ interface LevelUpOverlayProps {
 export function LevelUpOverlay({ info, onClose }: LevelUpOverlayProps) {
   if (!info) return null;
 
+  const stackedLines = [
+    'Leveled up!',
+    'Leveled up!',
+    'Leveled up!',
+    'Leveled up!',
+  ];
+
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-hidden select-none">
-        {/* Blue Light Pillar Rising Effect */}
-        <motion.div
-          initial={{ opacity: 0, scaleY: 0 }}
-          animate={{ opacity: 0.6, scaleY: 1 }}
-          transition={{ duration: 0.6, ease: 'easeOut' }}
-          className="absolute inset-x-0 h-full w-48 sm:w-80 mx-auto pointer-events-none bg-gradient-to-t from-transparent via-[#2F8CFF]/30 to-transparent blur-2xl origin-bottom"
-        />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.85, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9 }}
-          transition={{ duration: 0.35, ease: 'easeOut' }}
-          className="relative w-full max-w-sm rounded-sm bg-[#081630]/90 border border-[#2F8CFF] shadow-[0_0_35px_rgba(47,140,255,0.6)] p-6 text-center"
+      <div className="sys-overlay">
+        {/* Glowing bars sit above and below the box */}
+        <SystemWindow
+          title="NOTIFICATION"
+          withBars={true}
+          className="max-w-[420px] w-full"
         >
-          {/* Corner highlights */}
-          <div className="corner-bracket-tl" />
-          <div className="corner-bracket-tr" />
-          <div className="corner-bracket-bl" />
-          <div className="corner-bracket-br" />
-
-          {/* Subtitle */}
-          <div className="text-[11px] font-cyber tracking-widest text-[#7DF9FF] uppercase mb-1">
-            [ SYSTEM NOTIFICATION ]
-          </div>
-
-          {/* Glowing LEVEL UP title */}
-          <motion.h1
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: [1, 1.08, 1], opacity: 1 }}
-            transition={{ duration: 0.6, repeat: Infinity, repeatDelay: 2 }}
-            className="text-3xl sm:text-4xl font-black font-cyber text-[#E8F4FF] tracking-wider text-glow-cyan my-3"
-          >
-            LEVEL UP!
-          </motion.h1>
-
-          {/* Level Transition Badge */}
-          <div className="my-4 inline-flex items-center gap-3 px-4 py-2 rounded-xs bg-[#03060D]/80 border border-[#2F8CFF]/50 shadow-[0_0_15px_rgba(47,140,255,0.25)]">
-            <span className="font-cyber text-lg text-[#7FA6C9]">LV. {info.prevLevel}</span>
-            <span className="text-[#7DF9FF] font-black text-xl">→</span>
-            <span className="font-cyber text-2xl font-black text-[#7DF9FF] text-glow-cyan">
-              LV. {info.newLevel}
-            </span>
-          </div>
-
-          {/* Stat Boosts breakdown */}
-          <div className="my-5 space-y-2.5 text-left font-cyber text-xs">
-            <div className="flex items-center justify-between p-2 rounded-xs bg-[#07101F]/80 border border-[#2F8CFF]/20">
-              <span className="flex items-center gap-2 text-[#7FA6C9]">
-                <Sparkles className="w-4 h-4 text-[#FFC857]" />
-                Ability Points
-              </span>
-              <span className="font-bold text-[#FFC857]">+{info.pointsAdded} Points</span>
+          <div className="py-2 text-center space-y-6">
+            {/* Four stacked, staggered bold italic 'Leveled up!' lines with glowing blue aura */}
+            <div className="space-y-1 my-3">
+              {stackedLines.map((line, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, y: 14 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{
+                    delay: idx * 0.12,
+                    duration: 0.35,
+                    ease: [0.16, 1, 0.3, 1],
+                  }}
+                  className="leveled-line"
+                >
+                  {line}
+                </motion.div>
+              ))}
             </div>
 
-            <div className="flex items-center justify-between p-2 rounded-xs bg-[#07101F]/80 border border-[#2F8CFF]/20">
-              <span className="flex items-center gap-2 text-[#7FA6C9]">
-                <BatteryCharging className="w-4 h-4 text-[#3DFFA2]" />
-                Fatigue
-              </span>
-              <span className="font-bold text-[#3DFFA2]">Reset to 0%</span>
-            </div>
+            {/* Smaller body details */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.55, duration: 0.3 }}
+              className="space-y-2 font-body text-sm text-[#9fc4e0] border-t border-[rgba(183,227,255,0.2)] pt-4"
+            >
+              <div className="font-head font-bold text-white text-base tracking-wider">
+                Level {info.prevLevel} &gt; Level {info.newLevel}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-xs text-[#b7e3ff]">
+                <span>Ability Points +{info.pointsAdded}</span>
+                <span>•</span>
+                <span>Fatigue reset</span>
+                <span>•</span>
+                <span>HP / MP restored</span>
+              </div>
+            </motion.div>
 
-            <div className="flex items-center justify-between p-2 rounded-xs bg-[#07101F]/80 border border-[#2F8CFF]/20">
-              <span className="flex items-center gap-2 text-[#7FA6C9]">
-                <Heart className="w-4 h-4 text-[#FF3B4E]" />
-                HP / MP
-              </span>
-              <span className="font-bold text-[#7DF9FF]">Fully Restored</span>
-            </div>
+            {/* OK Button */}
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.65, duration: 0.25 }}
+              className="pt-2 flex justify-center"
+            >
+              <button
+                type="button"
+                onClick={onClose}
+                className="sys-btn px-10 py-2.5 text-sm"
+              >
+                CONFIRM
+              </button>
+            </motion.div>
           </div>
-
-          {/* Cold affirmative action button */}
-          <div className="mt-6">
-            <SystemButton variant="primary" size="lg" onClick={onClose} className="w-full">
-              CONTINUE
-            </SystemButton>
-          </div>
-        </motion.div>
+        </SystemWindow>
       </div>
     </AnimatePresence>
   );

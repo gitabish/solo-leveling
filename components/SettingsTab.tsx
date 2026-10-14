@@ -96,9 +96,9 @@ export function SettingsTab() {
   };
 
   return (
-    <div className="space-y-4 pb-20 select-none font-cyber">
+    <div className="space-y-4 pb-20 select-none font-body">
       {/* Configuration Window */}
-      <SystemWindow title="SYSTEM PREFERENCES" variant="blue">
+      <SystemWindow title="SYSTEM PREFERENCES">
         <div className="space-y-4 text-xs">
           {/* Player Name Change */}
           <form onSubmit={handleSaveName} className="space-y-2">

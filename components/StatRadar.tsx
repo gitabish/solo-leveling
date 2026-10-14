@@ -16,7 +16,7 @@ export function StatRadar({ stats, size = 200 }: StatRadarProps) {
     { key: 'agility', label: 'AGI' },
     { key: 'vitality', label: 'VIT' },
     { key: 'intelligence', label: 'INT' },
-    { key: 'sense', label: 'SEN' },
+    { key: 'sense', label: 'PER' },
   ];
 
   const center = size / 2;

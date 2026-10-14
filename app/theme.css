@@ -1,0 +1,424 @@
+/* Solo Leveling Authentic Anime System Theme CSS */
+
+:root {
+  --bg-0: #01050d;
+  --bg-1: #06101f;
+  --bg-2: #0b1a2e;
+  --line: #b7e3ff; /* window outlines: near-white ice blue */
+  --line-soft: rgba(207, 233, 255, 0.35);
+  --glow: #34b5ff; /* main electric blue glow */
+  --glow-hi: #87d7ff; /* text glow / bar highlights */
+  --text: #f4faff;
+  --text-dim: #9fc4e0;
+  --ok: #3dffa2; /* check marks only */
+  --bad: #ff2055; /* the word "penalty", danger */
+  --font-head: 'Montserrat', sans-serif;
+  --font-body: 'Source Sans 3', 'Open Sans', sans-serif;
+  --bar-inset: 2%;
+}
+
+/* Theme swaps */
+[data-theme="danger"], .theme-danger {
+  --glow: #ff2055;
+  --glow-hi: #ff708a;
+  --line: #ffb3c1;
+  --line-soft: rgba(255, 179, 193, 0.35);
+  --bg-1: #1f060b;
+  --bg-2: #2e0b12;
+}
+
+[data-theme="violet"], .theme-violet {
+  --glow: #a855f7;
+  --glow-hi: #c084fc;
+  --line: #e9d5ff;
+  --line-soft: rgba(233, 213, 255, 0.35);
+  --bg-1: #15061f;
+  --bg-2: #220b2e;
+}
+
+[data-theme="gold"], .theme-gold {
+  --glow: #eab308;
+  --glow-hi: #fde047;
+  --line: #fef08a;
+  --line-soft: rgba(254, 240, 138, 0.35);
+  --bg-1: #1f1a06;
+  --bg-2: #2e260b;
+}
+
+/* Background textures */
+.anime-system-bg {
+  min-height: 100vh;
+  background:
+    radial-gradient(ellipse at 50% 115%, rgba(47, 155, 255, 0.30), transparent 55%),
+    radial-gradient(ellipse at 50% 35%, var(--bg-1), var(--bg-0) 78%);
+  color: var(--text);
+  font-family: var(--font-body);
+  position: relative;
+}
+
+/* Thin crossing diagonal scratches like the anime screenshots */
+.scratched-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+  mix-blend-mode: screen;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 46px, rgba(120, 190, 255, 0.08) 46px 47px),
+    repeating-linear-gradient(62deg, transparent 0 70px, rgba(120, 190, 255, 0.06) 70px 71px),
+    repeating-linear-gradient(155deg, transparent 0 130px, rgba(160, 215, 255, 0.05) 130px 131px);
+  z-index: 1;
+}
+
+/* Bottom blue aura glow band */
+.bottom-aura-band {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 240px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 100%, rgba(47, 155, 255, 0.32), transparent 65%);
+  z-index: 2;
+}
+
+/* System Overlay for Modals */
+.sys-overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 3, 10, 0.82);
+  backdrop-filter: blur(3px);
+  z-index: 50;
+  padding: 16px;
+}
+
+/* Glowing Top and Bottom Laser Bars pushed to the edges of the box */
+.sys-bar-wrap {
+  position: absolute;
+  left: -24px;
+  right: -24px;
+  height: 14px;
+  filter: drop-shadow(0 0 8px var(--glow)) drop-shadow(0 0 24px var(--glow));
+  pointer-events: none;
+  z-index: 52;
+}
+
+.sys-bar-wrap.top {
+  top: -9px;
+}
+
+.sys-bar-wrap.bottom {
+  bottom: -9px;
+}
+
+.sys-bar {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--glow) 6%, var(--glow-hi) 50%, var(--glow) 94%, transparent);
+  clip-path: polygon(0 50%, 2.5% 0, 97.5% 0, 100% 50%, 97.5% 100%, 2.5% 100%);
+}
+
+.sys-bar::after {
+  content: "";
+  position: absolute;
+  left: 3%;
+  right: 3%;
+  top: calc(50% - 1px);
+  height: 2px;
+  background: #ffffff;
+  box-shadow: 0 0 6px #ffffff, 0 0 12px var(--glow-hi);
+}
+
+/* The Authentic System Window Box */
+.sys-window {
+  position: relative;
+  width: min(94vw, 540px);
+  padding: 24px 20px;
+  background: linear-gradient(160deg, rgba(14, 48, 82, 0.78), rgba(4, 16, 32, 0.92));
+  border: 1px solid var(--line);
+  box-shadow: 0 0 18px rgba(47, 155, 255, 0.35), inset 0 0 50px rgba(47, 155, 255, 0.12);
+  backdrop-filter: blur(8px);
+  border-radius: 2px;
+  z-index: 20;
+}
+
+/* Second thin outer frame offset by 8px, like the Status screenshot */
+.sys-window::before {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border: 1px solid var(--line-soft);
+  pointer-events: none;
+  border-radius: 3px;
+}
+
+/* Scratched texture inside the window box */
+.sys-window::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.35;
+  background:
+    repeating-linear-gradient(115deg, transparent 0 38px, rgba(150, 210, 255, 0.09) 38px 39px),
+    repeating-linear-gradient(60deg, transparent 0 64px, rgba(150, 210, 255, 0.06) 64px 65px);
+  border-radius: 2px;
+}
+
+.sys-window.tilt {
+  transform: perspective(1400px) rotateX(2deg) rotateY(-1.5deg);
+}
+
+/* Title Bar (STATUS, QUEST INFO, NOTIFICATION) */
+.sys-title-row {
+  display: flex;
+  gap: 10px;
+  align-items: stretch;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.sys-icon-box {
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  background: rgba(207, 233, 255, 0.05);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 10px rgba(47, 155, 255, 0.35);
+  flex-shrink: 0;
+}
+
+.sys-title {
+  flex: 1;
+  max-width: 340px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45em 1.4em;
+  border: 1px solid var(--line);
+  background: rgba(207, 233, 255, 0.05);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #ffffff;
+  text-shadow: 0 0 6px var(--glow-hi), 0 0 18px var(--glow);
+  box-shadow: 0 0 10px rgba(47, 155, 255, 0.35), inset 0 0 12px rgba(47, 155, 255, 0.2);
+}
+
+/* Inner Sections (HP/MP row, Stat grid) with plain 1px line border */
+.sys-inner-box {
+  border: 1px solid var(--line);
+  background: rgba(4, 16, 32, 0.4);
+  padding: 14px 16px;
+  border-radius: 2px;
+}
+
+/* Buttons */
+.sys-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 24px;
+  border: 1px solid var(--line);
+  background: rgba(207, 233, 255, 0.06);
+  color: var(--text);
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(47, 155, 255, 0.25);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.sys-btn:hover {
+  background: rgba(207, 233, 255, 0.16);
+  box-shadow: 0 0 16px var(--glow-hi);
+  transform: translateY(-1px);
+}
+
+.sys-btn:active {
+  transform: translateY(1px);
+}
+
+/* Pill Gauge */
+.gauge {
+  flex: 1;
+  height: 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  padding: 1.5px;
+  background: rgba(0, 10, 24, 0.7);
+  box-shadow: 0 0 8px var(--glow), inset 0 0 6px rgba(0, 0, 0, 0.6);
+  position: relative;
+}
+
+.gauge-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--glow), var(--glow-hi));
+  box-shadow: 0 0 10px var(--glow-hi);
+  transition: width 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.gauge-num {
+  font-family: var(--font-body);
+  font-size: 11px;
+  color: var(--text-dim);
+  text-align: right;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+}
+
+/* Huge level number */
+.level-num {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 68px;
+  line-height: 1;
+  color: #ffffff;
+  text-shadow: 0 0 8px #ffffff, 0 0 22px var(--glow-hi), 0 0 44px var(--glow);
+}
+
+/* Stat Grid */
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 24px;
+}
+
+.stat-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-head);
+}
+
+.stat-name {
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  color: var(--text);
+}
+
+.stat-val {
+  font-weight: 600;
+  font-size: 22px;
+  color: var(--text);
+  margin-left: auto;
+  font-family: var(--font-head);
+}
+
+/* Goal Heading */
+.goal-h {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.16em;
+  text-align: center;
+  color: #ffffff;
+  text-shadow: 0 0 8px var(--glow-hi);
+  display: inline-block;
+  border-bottom: 3px double var(--glow-hi);
+  padding-bottom: 2px;
+}
+
+/* Quest Row */
+.quest-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 16px;
+  color: var(--text);
+  padding: 6px 0;
+}
+
+.quest-check {
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid #ffffff;
+  border-radius: 3px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.quest-check.checked {
+  background: rgba(61, 255, 162, 0.15);
+  border-color: var(--ok);
+  color: var(--ok);
+  box-shadow: 0 0 8px var(--ok);
+}
+
+/* Warning */
+.warn-box {
+  line-height: 2.2;
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+  color: var(--text);
+}
+
+.warn-bad {
+  color: var(--bad);
+  font-weight: 700;
+  text-shadow: 0 0 8px var(--bad);
+}
+
+/* Confirm Button (Claim Rewards) */
+.confirm-btn {
+  width: 58px;
+  height: 58px;
+  border: 1px solid var(--line);
+  background: rgba(207, 233, 255, 0.06);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 10px rgba(47, 155, 255, 0.25);
+  border-radius: 3px;
+}
+
+.confirm-btn.active {
+  border-color: var(--ok);
+  background: rgba(61, 255, 162, 0.15);
+  box-shadow: 0 0 16px var(--ok);
+}
+
+/* Four stacked Leveled up! lines */
+.leveled-line {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 26px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 1.35;
+  text-shadow: 0 0 6px #ffffff, 0 0 16px var(--glow-hi), 0 0 34px var(--glow);
+}
+
+/* Font helpers */
+.font-head {
+  font-family: var(--font-head);
+}
+
+.font-body {
+  font-family: var(--font-body);
+}
+
+/* Icon glow helper */
+.icon-glow {
+  filter: drop-shadow(0 0 4px var(--glow-hi));
+}
